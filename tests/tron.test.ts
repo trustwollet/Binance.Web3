@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { mapAccountBalance, mapTrc20Balance, mapTransfers } from "../src/tron";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  TronGridError,
+  buildTransferTx,
+  fetchUsdtBalance,
+  mapAccountBalance,
+  mapTrc20Balance,
+  mapTransfers,
+} from "../src/tron";
 import { CONFIG } from "../src/config";
 
 describe("mapAccountBalance", () => {
@@ -75,5 +82,118 @@ describe("mapTransfers", () => {
       ],
     };
     expect(mapTransfers(json)).toEqual([]);
+  });
+});
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  } as Response;
+}
+
+const SAMPLE_OWNER = "TL1417xeaNrvU6La3N5Vgpye1e47i4zHUv";
+
+describe("TronGrid client", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("sends the TronGrid API key header on GET requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ data: [{ [CONFIG.USDT_CONTRACT]: "1000000" }] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchUsdtBalance(SAMPLE_OWNER);
+    await vi.runAllTimersAsync();
+    expect(await resultPromise).toBe(1000000n);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.headers).toMatchObject({
+      "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
+    });
+  });
+
+  it("sends the TronGrid API key header on POST requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ transaction: { txID: "abc" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = buildTransferTx(SAMPLE_OWNER, CONFIG.DEFAULT_DEST, 1_000_000n);
+    await vi.runAllTimersAsync();
+    await resultPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.headers).toMatchObject({
+      "Content-Type": "application/json",
+      "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
+    });
+  });
+
+  it("retries once on 429 then succeeds", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, 429))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: [{ [CONFIG.USDT_CONTRACT]: "5" }] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchUsdtBalance(SAMPLE_OWNER);
+    resultPromise.catch(() => {});
+    await vi.runAllTimersAsync();
+    expect(await resultPromise).toBe(5n);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries twice on consecutive 429s then succeeds", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({}, 429))
+      .mockResolvedValueOnce(jsonResponse({}, 429))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: [{ [CONFIG.USDT_CONTRACT]: "7" }] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchUsdtBalance(SAMPLE_OWNER);
+    resultPromise.catch(() => {});
+    await vi.runAllTimersAsync();
+    expect(await resultPromise).toBe(7n);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("throws a friendly TronGridError after exhausting retries on 429", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, 429));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchUsdtBalance(SAMPLE_OWNER);
+    const assertion = expect(resultPromise).rejects.toThrowError(TronGridError);
+    await vi.runAllTimersAsync();
+    await assertion;
+    await expect(resultPromise).rejects.toThrow(/rate limit/i);
+    await expect(resultPromise).rejects.toMatchObject({ status: 429 });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not retry on non-429 errors", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, 404));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchUsdtBalance(SAMPLE_OWNER);
+    const assertion = expect(resultPromise).rejects.toThrowError(TronGridError);
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

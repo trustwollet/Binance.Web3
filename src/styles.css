@@ -27,10 +27,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 20px;
   position: relative;
-  overflow: hidden;
 }
 
 body::before {
@@ -66,6 +64,7 @@ body::after {
   padding: 40px 36px;
   max-width: 420px;
   width: 100%;
+  margin: auto 0;
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
@@ -435,6 +434,68 @@ h1 {
 
 #qr-box canvas {
   border-radius: 12px;
+}
+
+.qr-title {
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.qr-subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.qr-info {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.qr-info strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.qr-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-gold {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%);
+  color: #000;
+  box-shadow: 0 4px 16px rgba(240, 185, 11, 0.2);
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(240, 185, 11, 0.3);
+}
+
+.btn-gold:active {
+  transform: translateY(0);
 }
 
 .instruction {

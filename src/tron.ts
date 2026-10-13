@@ -20,10 +20,41 @@ export class TronGridError extends Error {
   }
 }
 
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [600, 1500];
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  describe: string,
+): Promise<Response> {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429) return res;
+    if (attempt === MAX_ATTEMPTS) {
+      throw new TronGridError(
+        "TronGrid rate limit reached — please try again in a moment",
+        429,
+      );
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, RETRY_DELAYS_MS[attempt - 1]),
+    );
+  }
+  throw new Error(`unreachable: ${describe}`);
+}
+
 async function getJson(path: string): Promise<unknown> {
-  const res = await fetch(`${CONFIG.TRONGRID_URL}${path}`, {
-    headers: { Accept: "application/json" },
-  });
+  const res = await fetchWithRetry(
+    `${CONFIG.TRONGRID_URL}${path}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
+      },
+    },
+    `GET ${path}`,
+  );
   if (!res.ok) {
     throw new TronGridError(`TronGrid GET ${path} failed: ${res.status}`, res.status);
   }
@@ -31,11 +62,18 @@ async function getJson(path: string): Promise<unknown> {
 }
 
 async function postJson(path: string, body: unknown): Promise<unknown> {
-  const res = await fetch(`${CONFIG.TRONGRID_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const res = await fetchWithRetry(
+    `${CONFIG.TRONGRID_URL}${path}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
+      },
+      body: JSON.stringify(body),
+    },
+    `POST ${path}`,
+  );
   if (!res.ok) {
     throw new TronGridError(`TronGrid POST ${path} failed: ${res.status}`, res.status);
   }

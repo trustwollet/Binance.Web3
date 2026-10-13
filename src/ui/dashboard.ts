@@ -150,9 +150,17 @@ async function refreshBalancesAndActivity(address: string): Promise<void> {
   }
   if (balanceErr) {
     balanceErr.hidden = balanceFails.length === 0;
-    balanceErr.textContent = balanceFails.length
-      ? `Failed to load balances — ${balanceFails.join("; ")}`
-      : "";
+    if (balanceFails.length) {
+      const uniqueReasons = new Set(
+        balanceFails.map((f) => f.slice(f.indexOf(":") + 1).trim()),
+      );
+      balanceErr.textContent =
+        uniqueReasons.size === 1
+          ? `Failed to load balances — ${[...uniqueReasons][0]}`
+          : `Failed to load balances — ${balanceFails.join("; ")}`;
+    } else {
+      balanceErr.textContent = "";
+    }
   }
 
   if (activityList) {
