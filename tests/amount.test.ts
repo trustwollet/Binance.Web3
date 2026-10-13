@@ -68,9 +68,21 @@ describe("validateTransfer", () => {
     ).toEqual({ ok: false, error: "Amount exceeds balance" });
   });
 
-  it('errors "Amount exceeds balance" when amount is zero', () => {
+  it('errors "Amount must be greater than zero" when amount is zero', () => {
     expect(
       validateTransfer({ amountInput: "0", balanceBase: 1n }),
+    ).toEqual({ ok: false, error: "Amount must be greater than zero" });
+  });
+
+  it('errors "Amount must be greater than zero" when amount is 0.000000', () => {
+    expect(
+      validateTransfer({ amountInput: "0.000000", balanceBase: 1n }),
+    ).toEqual({ ok: false, error: "Amount must be greater than zero" });
+  });
+
+  it('errors "Amount exceeds balance" when amount is greater than a zero balance', () => {
+    expect(
+      validateTransfer({ amountInput: "1", balanceBase: 0n }),
     ).toEqual({ ok: false, error: "Amount exceeds balance" });
   });
 

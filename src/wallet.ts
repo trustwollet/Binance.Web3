@@ -37,7 +37,7 @@ export async function connectWallet(opts: {
         ? WalletConnectChainID.Nile
         : WalletConnectChainID.Mainnet,
     options: {
-      projectId: CONFIG.PROJECT_ID,
+      projectId: CONFIG.WALLETCONNECT_PROJECT_ID,
       metadata: {
         name: "USDT Transfer",
         url: location.origin,

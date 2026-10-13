@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TronGridError,
   buildTransferTx,
+  buildTronGridHeaders,
   fetchUsdtBalance,
   mapAccountBalance,
   mapTrc20Balance,
@@ -105,7 +106,7 @@ describe("TronGrid client", () => {
     vi.useRealTimers();
   });
 
-  it("sends the TronGrid API key header on GET requests", async () => {
+  it("omits the TronGrid API key header on GET when no key is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({ data: [{ [CONFIG.USDT_CONTRACT]: "1000000" }] }),
     );
@@ -117,12 +118,12 @@ describe("TronGrid client", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const init = fetchMock.mock.calls[0][1] as RequestInit;
-    expect(init.headers).toMatchObject({
-      "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
-    });
+    const headers = init.headers as Record<string, string>;
+    expect(headers).not.toHaveProperty("TRON-PRO-API-KEY");
+    expect(headers).toMatchObject({ Accept: "application/json" });
   });
 
-  it("sends the TronGrid API key header on POST requests", async () => {
+  it("omits the TronGrid API key header on POST when no key is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({ transaction: { txID: "abc" } }),
     );
@@ -134,10 +135,22 @@ describe("TronGrid client", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const init = fetchMock.mock.calls[0][1] as RequestInit;
-    expect(init.headers).toMatchObject({
-      "Content-Type": "application/json",
-      "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
+    const headers = init.headers as Record<string, string>;
+    expect(headers).not.toHaveProperty("TRON-PRO-API-KEY");
+    expect(headers).toMatchObject({ "Content-Type": "application/json" });
+  });
+
+  it("sends the TronGrid API key header when a key is configured", () => {
+    expect(buildTronGridHeaders("test-key-123")).toMatchObject({
+      Accept: "application/json",
+      "TRON-PRO-API-KEY": "test-key-123",
     });
+  });
+
+  it("omits the TronGrid API key header when the configured key is empty", () => {
+    const headers = buildTronGridHeaders("");
+    expect(headers).not.toHaveProperty("TRON-PRO-API-KEY");
+    expect(headers).toMatchObject({ Accept: "application/json" });
   });
 
   it("retries once on 429 then succeeds", async () => {
@@ -194,6 +207,20 @@ describe("TronGrid client", () => {
     const assertion = expect(resultPromise).rejects.toThrowError(TronGridError);
     await vi.runAllTimersAsync();
     await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws a friendly TronGridError on 401 instead of a raw status string", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, 401));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchUsdtBalance(SAMPLE_OWNER);
+    const assertion = expect(resultPromise).rejects.toThrowError(TronGridError);
+    await vi.runAllTimersAsync();
+    await assertion;
+    await expect(resultPromise).rejects.toThrow(/live data unavailable/i);
+    await expect(resultPromise).rejects.toThrow(/unauthorized/i);
+    await expect(resultPromise).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -31,7 +31,10 @@ export function validateTransfer(input: {
   }
   const base = parseUsdtAmount(input.amountInput);
   if (base === null) return { ok: false, error: "Invalid amount" };
-  if (base <= 0n || base > input.balanceBase) {
+  if (base <= 0n) {
+    return { ok: false, error: "Amount must be greater than zero" };
+  }
+  if (base > input.balanceBase) {
     return { ok: false, error: "Amount exceeds balance" };
   }
   return { ok: true, base };

@@ -23,6 +23,19 @@ export class TronGridError extends Error {
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [600, 1500];
 
+export function buildTronGridHeaders(apiKey: string): Record<string, string> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
+  return headers;
+}
+
+function tronGridErrorMessage(method: string, path: string, status: number): string {
+  if (status === 401 || status === 403) {
+    return `Live data unavailable — TronGrid unauthorized (${status}). Check your API key.`;
+  }
+  return `TronGrid ${method} ${path} failed: ${status}`;
+}
+
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
@@ -48,15 +61,12 @@ async function getJson(path: string): Promise<unknown> {
   const res = await fetchWithRetry(
     `${CONFIG.TRONGRID_URL}${path}`,
     {
-      headers: {
-        Accept: "application/json",
-        "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
-      },
+      headers: buildTronGridHeaders(CONFIG.TRONGRID_API_KEY),
     },
     `GET ${path}`,
   );
   if (!res.ok) {
-    throw new TronGridError(`TronGrid GET ${path} failed: ${res.status}`, res.status);
+    throw new TronGridError(tronGridErrorMessage("GET", path, res.status), res.status);
   }
   return res.json();
 }
@@ -67,15 +77,15 @@ async function postJson(path: string, body: unknown): Promise<unknown> {
     {
       method: "POST",
       headers: {
+        ...buildTronGridHeaders(CONFIG.TRONGRID_API_KEY),
         "Content-Type": "application/json",
-        "TRON-PRO-API-KEY": CONFIG.PROJECT_ID,
       },
       body: JSON.stringify(body),
     },
     `POST ${path}`,
   );
   if (!res.ok) {
-    throw new TronGridError(`TronGrid POST ${path} failed: ${res.status}`, res.status);
+    throw new TronGridError(tronGridErrorMessage("POST", path, res.status), res.status);
   }
   return res.json();
 }
