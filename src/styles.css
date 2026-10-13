@@ -85,3 +85,45 @@ input[type="text"]:focus { outline: none; border-color: #f0b90b; }
 #disconnect-btn { background: #e74c3c; color: #fff; }
 #connect-btn:hover, #disconnect-btn:hover { opacity: 0.85; }
 #qr-canvas { display: block; margin: 0 auto; background: #fff; border-radius: 8px; }
+
+/* --- Task 7: dashboard + connect view additions --- */
+.field-label {
+    display: block; margin-top: 16px; color: #aaa;
+    font-size: 0.85rem; font-weight: 600;
+}
+.dest-hint { text-align: left; margin-top: 6px; min-height: 1.1em; }
+.dest-hint.hint-invalid { color: #ff8a80; }
+.notice {
+    margin-top: 12px; padding: 10px; background: #1e2a3d;
+    border: 1px solid #3d6df0; border-radius: 8px;
+    color: #9db8ff; font-size: 0.85rem; text-align: center;
+}
+.balance-cards { display: flex; gap: 12px; margin-top: 16px; }
+.balance-card {
+    flex: 1; background: #1e1e1e; border: 1px solid #333;
+    border-radius: 8px; padding: 14px; text-align: center;
+}
+.balance-label { display: block; color: #888; font-size: 0.75rem; margin-bottom: 6px; }
+.balance-value { font-size: 1rem; color: #f0b90b; word-break: break-word; }
+.section-title {
+    margin-top: 24px; margin-bottom: 4px; font-size: 1rem; color: #f0b90b;
+}
+.amount-row { display: flex; gap: 8px; margin-top: 8px; }
+.amount-row input[type="text"] { margin-top: 0; flex: 1; }
+#max-btn {
+    padding: 0 14px; border: none; border-radius: 8px;
+    background: #333; color: #f0b90b; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+}
+#max-btn:hover { opacity: 0.85; }
+.activity-list { list-style: none; margin-top: 8px; }
+.activity-item {
+    background: #1e1e1e; border: 1px solid #333; border-radius: 8px;
+    padding: 10px 12px; margin-top: 8px; font-size: 0.85rem;
+    word-break: break-all;
+}
+.activity-amount { display: block; color: #f0b90b; font-weight: 600; margin-bottom: 4px; }
+.tx-link { color: #9db8ff; font-family: monospace; font-size: 0.8rem; }
+.activity-empty, .activity-loading { text-align: left; margin-top: 8px; }
+.activity-error { text-align: left; margin-top: 8px; }
+#status .tx-link { display: inline-block; margin-left: 6px; }

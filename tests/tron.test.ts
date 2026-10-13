@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { mapTrc20Rows, mapTransfers } from "../src/tron";
+import { mapTrc20Balance, mapTransfers } from "../src/tron";
 import { CONFIG } from "../src/config";
 
-describe("mapTrc20Rows", () => {
-  it("sums balances for the selected contract", () => {
-    const rows = [
-      { token_info: { address: CONFIG.USDT_CONTRACT }, balance: "1000000" },
-      { token_info: { address: "OTHER" }, balance: "9" },
-    ];
-    expect(mapTrc20Rows(rows, CONFIG.USDT_CONTRACT)).toBe(1000000n);
+describe("mapTrc20Balance", () => {
+  it("reads the contract balance from the balance response", () => {
+    const json = {
+      data: [{ [CONFIG.USDT_CONTRACT]: "1000000" }, { OTHER: "9" }],
+      success: true,
+    };
+    expect(mapTrc20Balance(json, CONFIG.USDT_CONTRACT)).toBe(1000000n);
   });
 
   it("returns 0n when contract missing", () => {
-    const rows = [{ token_info: { address: "OTHER" }, balance: "9" }];
-    expect(mapTrc20Rows(rows, CONFIG.USDT_CONTRACT)).toBe(0n);
-    expect(mapTrc20Rows([], CONFIG.USDT_CONTRACT)).toBe(0n);
+    expect(mapTrc20Balance({ data: [{ OTHER: "9" }] }, CONFIG.USDT_CONTRACT)).toBe(0n);
+    expect(mapTrc20Balance({ data: [] }, CONFIG.USDT_CONTRACT)).toBe(0n);
+    expect(mapTrc20Balance("garbage", CONFIG.USDT_CONTRACT)).toBe(0n);
   });
 });
 

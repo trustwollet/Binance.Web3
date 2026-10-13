@@ -1,108 +1,88 @@
-import QRious from "qrious";
 import "./styles.css";
+import { renderConnectView } from "./ui/connect";
+import { renderDashboardView } from "./ui/dashboard";
 import { connectWallet, type WalletSession } from "./wallet";
 
-type View =
-  | { kind: "connect" }
-  | { kind: "qr"; uri: string }
-  | { kind: "connected"; session: WalletSession };
+type View = "connect" | "qr" | "dashboard";
 
-let view: View = { kind: "connect" };
+const state = {
+  view: "connect" as View,
+  session: null as WalletSession | null,
+  qrUri: null as string | null,
+  connectError: null as string | null,
+  notice: null as string | null,
+  dest: "",
+};
 
-function render() {
-  const app = document.querySelector("#app");
-  if (!app) return;
-
-  let body = "";
-  if (view.kind === "connect") {
-    body = `
-      <p class="instruction">Connect with Binance Web3 Wallet</p>
-      <button id="connect-btn" type="button">Connect Wallet</button>
-      <p id="connect-error" class="error" hidden></p>
-    `;
-  } else if (view.kind === "qr") {
-    body = `
-      <p class="instruction">Scan with Binance Web3 Wallet</p>
-      <canvas id="qr-canvas" width="240" height="240"></canvas>
-      <p class="hint">Waiting for wallet approval…</p>
-      <p id="connect-error" class="error" hidden></p>
-    `;
-  } else {
-    const address = view.session.address;
-    body = `
-      <p class="connected-address">${address}</p>
-      <button id="disconnect-btn" type="button">Disconnect</button>
-      <div id="dashboard-view"></div>
-    `;
-  }
-
-  app.innerHTML = `
-    <div class="container">
-      <h1>USDT Transfer</h1>
-      <p class="subtitle">Send USDT on TRON (TRC-20)</p>
-      ${body}
-    </div>
-  `;
-
-  if (view.kind === "qr") {
-    new QRious({
-      element: document.querySelector<HTMLCanvasElement>("#qr-canvas")!,
-      value: view.uri,
-      size: 240,
-      level: "M",
-      background: "#ffffff",
-      foreground: "#000000",
-      padding: 12,
-    });
-  }
-
-  const connectBtn = document.querySelector("#connect-btn");
-  if (connectBtn) {
-    connectBtn.addEventListener("click", () => {
-      void startConnect();
-    });
-  }
-
-  const disconnectBtn = document.querySelector("#disconnect-btn");
-  if (disconnectBtn) {
-    disconnectBtn.addEventListener("click", () => {
-      const current = view.kind === "connected" ? view.session : null;
-      view = { kind: "connect" };
-      render();
-      if (current) void current.disconnect().catch(() => {});
-    });
-  }
+function goConnect(opts: { notice?: string; error?: string } = {}): void {
+  state.view = "connect";
+  state.qrUri = null;
+  state.notice = opts.notice ?? null;
+  state.connectError = opts.error ?? null;
+  render();
 }
 
-async function startConnect() {
+function render(): void {
+  if (state.view === "dashboard" && state.session) {
+    const session = state.session;
+    renderDashboardView({
+      session,
+      dest: state.dest,
+      onDestChange: (dest) => {
+        state.dest = dest;
+      },
+      onDisconnect: () => {
+        state.session = null;
+        goConnect();
+        void session.disconnect().catch(() => {});
+      },
+    });
+    return;
+  }
+
+  renderConnectView({
+    dest: state.dest,
+    qrUri: state.qrUri,
+    error: state.connectError,
+    notice: state.notice,
+    onDestChange: (dest) => {
+      state.dest = dest;
+    },
+    onConnect: (dest) => {
+      state.dest = dest;
+      void startConnect();
+    },
+  });
+}
+
+async function startConnect(): Promise<void> {
   try {
     const session = await connectWallet({
       onUri: (uri) => {
-        view = { kind: "qr", uri };
+        state.view = "qr";
+        state.qrUri = uri;
         render();
       },
       onDisconnect: () => {
-        view = { kind: "connect" };
-        render();
+        if (state.view === "dashboard") {
+          state.session = null;
+          goConnect({ notice: "Wallet disconnected" });
+        }
       },
     });
-    view = { kind: "connected", session };
+    state.session = session;
+    state.view = "dashboard";
+    state.qrUri = null;
+    state.connectError = null;
     render();
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Connection failed";
-    const errorEl = document.querySelector<HTMLElement>("#connect-error");
-    if (errorEl) {
-      errorEl.hidden = false;
-      errorEl.textContent = message;
-    } else {
-      view = { kind: "connect" };
+    const message = error instanceof Error ? error.message : "Connection failed";
+    if (state.view === "qr") {
+      // Stay on the QR screen and show the error inline.
+      state.connectError = message;
       render();
-      const newError = document.querySelector<HTMLElement>("#connect-error");
-      if (newError) {
-        newError.hidden = false;
-        newError.textContent = message;
-      }
+    } else {
+      goConnect({ error: message });
     }
   }
 }

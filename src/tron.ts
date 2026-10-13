@@ -42,22 +42,20 @@ async function postJson(path: string, body: unknown): Promise<unknown> {
   return res.json();
 }
 
-/** Pure: pick the balance of `contract` from a TRC-20 accounts row array. */
-export function mapTrc20Rows(rows: unknown[], contract: string): bigint {
-  let total = 0n;
-  for (const row of rows) {
+/** Pure: pick the balance of `contract` from a TronGrid trc20/balance response. */
+export function mapTrc20Balance(json: unknown, contract: string): bigint {
+  if (!isRecord(json) || !Array.isArray(json.data)) return 0n;
+  for (const row of json.data) {
     if (!row || typeof row !== "object") continue;
-    const r = row as { token_info?: { address?: unknown }; balance?: unknown };
-    const tokenAddress = r.token_info?.address;
-    if (tokenAddress !== contract) continue;
-    if (typeof r.balance !== "string" && typeof r.balance !== "number") continue;
+    const raw = (row as Record<string, unknown>)[contract];
+    if (typeof raw !== "string" && typeof raw !== "number") continue;
     try {
-      total += BigInt(r.balance);
+      return BigInt(raw);
     } catch {
-      // skip malformed balance
+      return 0n;
     }
   }
-  return total;
+  return 0n;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -88,10 +86,9 @@ export function mapTransfers(json: unknown): ActivityItem[] {
 
 export async function fetchUsdtBalance(addrBase58: string): Promise<bigint> {
   const json = await getJson(
-    `/v1/accounts/${addrBase58}/trc20?limit=200&only_to=false`,
+    `/v1/accounts/${addrBase58}/trc20/balance?contract_address=${CONFIG.USDT_CONTRACT}`,
   );
-  const rows = isRecord(json) && Array.isArray(json.data) ? json.data : [];
-  return mapTrc20Rows(rows, CONFIG.USDT_CONTRACT);
+  return mapTrc20Balance(json, CONFIG.USDT_CONTRACT);
 }
 
 export async function fetchTrxBalance(addrBase58: string): Promise<bigint> {
@@ -107,7 +104,7 @@ export async function fetchUsdtActivity(
   limit = 20,
 ): Promise<ActivityItem[]> {
   const json = await getJson(
-    `/v1/accounts/${addrBase58}/trc20/transfers?limit=${limit}&contract_addresses=${CONFIG.USDT_CONTRACT}`,
+    `/v1/accounts/${addrBase58}/transactions/trc20?limit=${limit}&contract_address=${CONFIG.USDT_CONTRACT}`,
   );
   return mapTransfers(json);
 }
