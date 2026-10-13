@@ -21,21 +21,32 @@
             background: #16161a;
             border-radius: 16px;
             padding: 40px;
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         h1 { font-size: 1.5rem; margin-bottom: 8px; color: #f0b90b; text-align: center; }
         .subtitle { color: #888; text-align: center; margin-bottom: 24px; font-size: 0.9rem; }
         #status {
-            text-align: center; padding: 16px;
-            background: #1e1e1e; border-radius: 8px; margin: 16px 0; font-size: 0.9rem;
+            text-align: center; padding: 12px;
+            background: #1e1e1e; border-radius: 8px; margin: 12px 0; font-size: 0.9rem;
             word-break: break-word;
         }
         #status.error { background: #3d0a0a; border: 1px solid #e74c3c; }
         #status.connected { background: #0a3d0a; border: 1px solid #2ecc71; }
+        #qr-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 280px;
+            margin: 16px 0;
+        }
+        #qr-box canvas, #qr-box img { border-radius: 8px; }
         .info {
-            margin-top: 20px; padding: 12px; background: #1e1e1e;
+            margin-top: 16px; padding: 12px; background: #1e1e1e;
             border-radius: 8px; font-size: 0.8rem; color: #888;
         }
         .info p { margin: 4px 0; }
@@ -48,23 +59,24 @@
         <p class="subtitle">Scan QR to Connect</p>
 
         <div id="status">Loading...</div>
-        <div id="qrcode" style="display:flex;justify-content:center;margin:16px 0;min-height:220px;"></div>
+        <div id="qr-box"></div>
 
         <div class="info">
             <p><strong>Steps:</strong></p>
-            <p>1. Open Binance App on phone</p>
-            <p>2. Go to Web3 Wallet tab</p>
+            <p>1. Open Binance App</p>
+            <p>2. Web3 Wallet tab</p>
             <p>3. Tap scan icon (top right)</p>
-            <p>4. Scan the QR code</p>
-            <p>5. Approve connection in Binance</p>
+            <p>4. Scan the QR code above</p>
+            <p>5. Approve in Binance</p>
         </div>
     </div>
 
-    <!-- Load all dependencies from jsdelivr (reliable CDN) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- QRious: small, reliable QR library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
     <script>
         const statusDiv = document.getElementById('status');
+        const qrBox = document.getElementById('qr-box');
         const PROJECT_ID = '4689db3295784d6a806b30b4975c8faa';
 
         function setStatus(text, cls) {
@@ -72,16 +84,26 @@
             statusDiv.className = cls || '';
         }
 
+        function renderQR(uri) {
+            setStatus('Scan this QR with Binance Web3 Wallet');
+            qrBox.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            qrBox.appendChild(canvas);
+            new QRious({
+                element: canvas,
+                value: uri,
+                size: 320,
+                level: 'H'
+            });
+        }
+
         async function connect() {
             try {
                 setStatus('Loading libraries...');
-
-                // Load EthereumProvider from jsdelivr
                 const mod = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.2/+esm');
                 const EthereumProvider = mod.EthereumProvider || mod.default;
 
                 setStatus('Initializing...');
-
                 const provider = await EthereumProvider.init({
                     projectId: PROJECT_ID,
                     chains: [56],
@@ -95,32 +117,19 @@
                     }
                 });
 
-                setStatus('Waiting for QR...');
-
                 provider.on('display_uri', (uri) => {
-                    console.log('URI received:', uri);
-                    setStatus('Scan this QR with Binance Web3 Wallet');
-                    const uriInfo = document.createElement('p');
-                    uriInfo.style.cssText = 'font-size:0.6rem;color:#555;margin-top:10px;word-break:break-all;';
-                    uriInfo.textContent = uri.substring(0, 80) + '...';
-                    statusDiv.appendChild(uriInfo);
-                    const el = document.getElementById('qrcode');
-                    el.innerHTML = '';
-                    if (window.QRCode) {
-                        new QRCode(el, {
-                            text: uri,
-                            width: 300,
-                            height: 300,
-                            colorDark: '#000000',
-                            colorLight: '#ffffff',
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
-                    }
+                    console.log('WC URI:', uri);
+                    renderQR(uri);
                 });
 
                 provider.on('connect', (accounts) => {
                     const addr = accounts?.accounts?.[0] || accounts?.[0] || 'Connected';
                     setStatus('✅ Connected! ' + addr, 'connected');
+                    qrBox.innerHTML = '';
+                });
+
+                provider.on('disconnect', () => {
+                    setStatus('Disconnected. Refresh to reconnect.');
                 });
 
                 setStatus('Connecting...');
