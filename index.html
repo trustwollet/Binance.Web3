@@ -48,6 +48,7 @@
         <p class="subtitle">Scan QR to Connect</p>
 
         <div id="status">Loading...</div>
+        <div id="qrcode" style="display:flex;justify-content:center;margin:16px 0;min-height:220px;"></div>
 
         <div class="info">
             <p><strong>Steps:</strong></p>
@@ -99,11 +100,15 @@
                 provider.on('display_uri', (uri) => {
                     console.log('URI received:', uri);
                     setStatus('Scan this QR with Binance Web3 Wallet');
-                    // Show URI as text fallback too
-                    const p = document.createElement('p');
-                    p.style.cssText = 'font-size:0.5rem;color:#555;margin-top:10px;word-break:break-all;';
-                    p.textContent = uri.substring(0, 60) + '...';
-                    statusDiv.appendChild(p);
+                    // Render QR code
+                    if (window.QRCode) {
+                        const el = document.getElementById('qrcode');
+                        QRCode.toCanvas(uri, { width: 220, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, function(err, canvas) {
+                            if (err) { console.error('QR error:', err); return; }
+                            el.innerHTML = '';
+                            el.appendChild(canvas);
+                        });
+                    }
                 });
 
                 provider.on('connect', (accounts) => {
