@@ -112,23 +112,30 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
       fetchUsdtActivity(opts.session.address),
     ]);
 
-    let balanceFailed = false;
+    const failDetail = (label: string, r: PromiseRejectedResult): string => {
+      const why = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      return `${label}: ${why}`;
+    };
+
+    const balanceFails: string[] = [];
     if (usdtResult.status === "fulfilled") {
       balanceBase = usdtResult.value;
       if (usdtEl) usdtEl.textContent = `${formatUsdtAmount(usdtResult.value)} USDT`;
     } else {
-      balanceFailed = true;
+      balanceFails.push(failDetail("USDT", usdtResult));
       if (usdtEl) usdtEl.textContent = "—";
     }
     if (trxResult.status === "fulfilled") {
       if (trxEl) trxEl.textContent = `${formatUsdtAmount(trxResult.value)} TRX`;
     } else {
-      balanceFailed = true;
+      balanceFails.push(failDetail("TRX", trxResult));
       if (trxEl) trxEl.textContent = "—";
     }
     if (balanceErr) {
-      balanceErr.hidden = !balanceFailed;
-      balanceErr.textContent = balanceFailed ? "Failed to load balances" : "";
+      balanceErr.hidden = balanceFails.length === 0;
+      balanceErr.textContent = balanceFails.length
+        ? `Failed to load balances — ${balanceFails.join("; ")}`
+        : "";
     }
 
     if (activityList) {
@@ -145,7 +152,11 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
       } else if (activityResult.status === "fulfilled") {
         activityList.innerHTML = `<li class="activity-empty hint">No recent transfers</li>`;
       } else {
-        activityList.innerHTML = `<li class="activity-error error">Failed to load activity</li>`;
+        const why =
+          activityResult.reason instanceof Error
+            ? activityResult.reason.message
+            : String(activityResult.reason);
+        activityList.innerHTML = `<li class="activity-error error">Failed to load activity: ${esc(why)}</li>`;
       }
     }
   }
