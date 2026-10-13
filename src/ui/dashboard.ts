@@ -16,7 +16,6 @@ function esc(value: string): string {
 export type DashboardViewOpts = {
   session: WalletSession;
   dest: string;
-  isHotWallet: boolean;
   onDestChange: (dest: string) => void;
   onDisconnect: () => void;
 };
@@ -37,7 +36,7 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
     <div class="container">
       <h1>USDT Transfer</h1>
       <p class="subtitle">Send USDT on TRON (TRC-20)</p>
-      <p class="connected-address">${esc(opts.session.address)}${opts.isHotWallet ? ' <span class="badge-hot">Hot Wallet</span>' : ""}</p>
+      <p class="connected-address">${esc(opts.session.address)}</p>
 
       <div class="balance-cards">
         <div class="balance-card">
