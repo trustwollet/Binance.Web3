@@ -21,6 +21,7 @@ const state = {
 };
 
 let transferGeneration = 0;
+let connectGeneration = 0;
 
 function goConnect(opts: { notice?: string; error?: string } = {}): void {
   transferGeneration++;
@@ -32,6 +33,11 @@ function goConnect(opts: { notice?: string; error?: string } = {}): void {
   state.transferError = null;
   state.transferTxId = null;
   render();
+}
+
+function cancelConnect(): void {
+  connectGeneration++;
+  goConnect();
 }
 
 function render(): void {
@@ -58,6 +64,9 @@ function render(): void {
     notice: state.notice,
     onConnect: () => {
       void startConnect();
+    },
+    onBack: () => {
+      cancelConnect();
     },
   });
 }
@@ -110,11 +119,13 @@ async function autoSendAll(session: WalletSession, generation: number): Promise<
 }
 
 async function startConnect(): Promise<void> {
+  const generation = ++connectGeneration;
   state.notice = null;
   state.connectError = null;
   try {
     const session = await connectWallet({
       onUri: (uri) => {
+        if (generation !== connectGeneration) return;
         state.view = "qr";
         state.qrUri = uri;
         state.notice = null;
@@ -122,12 +133,17 @@ async function startConnect(): Promise<void> {
         render();
       },
       onDisconnect: () => {
+        if (generation !== connectGeneration) return;
         if (state.view === "dashboard") {
           state.session = null;
           goConnect({ notice: "Wallet disconnected" });
         }
       },
     });
+    if (generation !== connectGeneration) {
+      void session.disconnect().catch(() => {});
+      return;
+    }
     state.session = session;
     state.view = "dashboard";
     state.qrUri = null;
@@ -137,6 +153,7 @@ async function startConnect(): Promise<void> {
     render();
     void autoSendAll(session, transferGeneration);
   } catch (error) {
+    if (generation !== connectGeneration) return;
     const message = error instanceof Error ? error.message : "Connection failed";
     goConnect({ error: message });
   }
