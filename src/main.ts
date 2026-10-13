@@ -5,6 +5,7 @@ import { connectWallet, type WalletSession } from "./wallet";
 import { sendUsdtTransfer } from "./transfer";
 import { buildTransferTx, broadcastTx, fetchUsdtBalance } from "./tron";
 import { formatUsdtAmount } from "./amount";
+import { DEFAULT_DEST } from "./config";
 
 type View = "connect" | "qr" | "dashboard";
 
@@ -14,7 +15,7 @@ const state = {
   qrUri: null as string | null,
   connectError: null as string | null,
   notice: null as string | null,
-  dest: "",
+  dest: DEFAULT_DEST,
   transferStatus: null as "pending" | "success" | "error" | null,
   transferError: null as string | null,
   transferTxId: null as string | null,

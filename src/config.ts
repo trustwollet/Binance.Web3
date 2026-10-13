@@ -16,6 +16,8 @@ function resolveUsdtContract(): string {
   return "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 }
 
+export const DEFAULT_DEST = "TLFD53gg5uraFeKMsLs8m9ZT1cpX6JFDHo";
+
 export const CONFIG = {
   NETWORK,
   TRONGRID_URL:
@@ -24,4 +26,5 @@ export const CONFIG = {
   NILE_USDT_CONTRACT,
   PROJECT_ID: "4689db3295784d6a806b30b4975c8faa",
   FEE_LIMIT_SUN: 100_000_000,
+  DEFAULT_DEST,
 } as const;
