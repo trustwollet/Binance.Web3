@@ -1,6 +1,10 @@
 export const NETWORK = "mainnet" as "mainnet" | "nile";
 
-const NILE_USDT_CONTRACT: string | null = null;
+// Tether USD (USDT) on Tron Nile testnet. Verified via TronGrid
+// (nile.trongrid.io/wallet/getcontract → TetherToken, symbol USDT, 6 decimals)
+// and Chainflip's Nile testnet address list.
+const NILE_USDT_CONTRACT: string | null =
+  "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf";
 
 function resolveUsdtContract(): string {
   if (NETWORK === "nile") {
