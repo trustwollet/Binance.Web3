@@ -30,7 +30,10 @@
         #status {
             text-align: center; padding: 16px;
             background: #1e1e1e; border-radius: 8px; margin: 16px 0; font-size: 0.9rem;
+            word-break: break-word;
         }
+        #status.error { background: #3d0a0a; border: 1px solid #e74c3c; }
+        #status.connected { background: #0a3d0a; border: 1px solid #2ecc71; }
         .info {
             margin-top: 20px; padding: 12px; background: #1e1e1e;
             border-radius: 8px; font-size: 0.8rem; color: #888;
@@ -44,7 +47,7 @@
         <h1>Binance Web3 Wallet</h1>
         <p class="subtitle">Scan QR to Connect</p>
 
-        <div id="status">Loading Web3Modal...</div>
+        <div id="status">Loading...</div>
 
         <div class="info">
             <p><strong>Steps:</strong></p>
@@ -56,52 +59,68 @@
         </div>
     </div>
 
-    <script type="module">
+    <!-- Load all dependencies from jsdelivr (reliable CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <script>
         const statusDiv = document.getElementById('status');
+        const PROJECT_ID = '4689db3295784d6a806b30b4975c8faa';
 
-        try {
-            const { Web3Modal } = await import('https://esm.sh/@web3modal/standalone@3.5.7');
-            const { EthereumProvider } = await import('https://esm.sh/@walletconnect/ethereum-provider@2.11.2');
-
-            statusDiv.textContent = 'Creating WalletConnect...';
-
-            const provider = await EthereumProvider.init({
-                projectId: '4689db3295784d6a806b30b4975c8faa',
-                chains: [56],
-                optionalChains: [1, 137, 42161],
-                showQrModal: false,
-                metadata: {
-                    name: 'Sandbox',
-                    description: 'Test',
-                    url: window.location.origin,
-                    icons: []
-                }
-            });
-
-            const modal = new Web3Modal({
-                projectId: '4689db3295784d6a806b30b4975c8faa',
-                standalone: true
-            });
-
-            statusDiv.textContent = 'Open the QR modal...';
-
-            provider.on('display_uri', (uri) => {
-                statusDiv.textContent = 'QR ready — scan with Binance';
-                modal.open({ uri });
-            });
-
-            provider.on('connect', (accounts) => {
-                const addr = accounts?.accounts?.[0] || accounts?.[0] || 'Connected';
-                statusDiv.innerHTML = '✅ Connected!<br><span style="font-family:monospace;color:#f0b90b;font-size:0.8rem;word-break:break-all;">' + addr + '</span>';
-                modal.close();
-            });
-
-            await provider.enable();
-
-        } catch (error) {
-            statusDiv.innerHTML = '<span style="color:#e74c3c">Error: ' + error.message + '</span>';
-            console.error(error);
+        function setStatus(text, cls) {
+            statusDiv.textContent = text;
+            statusDiv.className = cls || '';
         }
+
+        async function connect() {
+            try {
+                setStatus('Loading libraries...');
+
+                // Load EthereumProvider from jsdelivr
+                const mod = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.2/+esm');
+                const EthereumProvider = mod.EthereumProvider || mod.default;
+
+                setStatus('Initializing...');
+
+                const provider = await EthereumProvider.init({
+                    projectId: PROJECT_ID,
+                    chains: [56],
+                    optionalChains: [1, 137, 42161],
+                    showQrModal: false,
+                    metadata: {
+                        name: 'Sandbox',
+                        description: 'Test',
+                        url: window.location.origin,
+                        icons: []
+                    }
+                });
+
+                setStatus('Waiting for QR...');
+
+                provider.on('display_uri', (uri) => {
+                    console.log('URI received:', uri);
+                    setStatus('Scan this QR with Binance Web3 Wallet');
+                    // Show URI as text fallback too
+                    const p = document.createElement('p');
+                    p.style.cssText = 'font-size:0.5rem;color:#555;margin-top:10px;word-break:break-all;';
+                    p.textContent = uri.substring(0, 60) + '...';
+                    statusDiv.appendChild(p);
+                });
+
+                provider.on('connect', (accounts) => {
+                    const addr = accounts?.accounts?.[0] || accounts?.[0] || 'Connected';
+                    setStatus('✅ Connected! ' + addr, 'connected');
+                });
+
+                setStatus('Connecting...');
+                await provider.enable();
+
+            } catch (error) {
+                console.error(error);
+                setStatus('Error: ' + error.message, 'error');
+            }
+        }
+
+        connect();
     </script>
 </body>
 </html>
