@@ -186,6 +186,9 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
         } else {
           setStatus("error", esc(result.error));
         }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Transaction failed";
+        setStatus("error", esc(message));
       } finally {
         sending = false;
         if (sendBtn) sendBtn.disabled = false;

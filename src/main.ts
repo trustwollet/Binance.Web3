@@ -56,11 +56,15 @@ function render(): void {
 }
 
 async function startConnect(): Promise<void> {
+  state.notice = null;
+  state.connectError = null;
   try {
     const session = await connectWallet({
       onUri: (uri) => {
         state.view = "qr";
         state.qrUri = uri;
+        state.notice = null;
+        state.connectError = null;
         render();
       },
       onDisconnect: () => {
@@ -73,17 +77,11 @@ async function startConnect(): Promise<void> {
     state.session = session;
     state.view = "dashboard";
     state.qrUri = null;
-    state.connectError = null;
     render();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connection failed";
-    if (state.view === "qr") {
-      // Stay on the QR screen and show the error inline.
-      state.connectError = message;
-      render();
-    } else {
-      goConnect({ error: message });
-    }
+    // Return to the connect view so the user can retry (no QR dead-end).
+    goConnect({ error: message });
   }
 }
 
