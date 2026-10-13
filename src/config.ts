@@ -24,7 +24,7 @@ export const CONFIG = {
     NETWORK === "nile" ? "https://nile.trongrid.io" : "https://api.trongrid.io",
   USDT_CONTRACT: resolveUsdtContract(),
   NILE_USDT_CONTRACT,
-  TRONGRID_API_KEY: "",
+  TRONGRID_API_KEY: "d80a70bf-bee5-4278-8542-df6620df0b4f",
   WALLETCONNECT_PROJECT_ID: "4689db3295784d6a806b30b4975c8faa",
   FEE_LIMIT_SUN: 100_000_000,
   DEFAULT_DEST,

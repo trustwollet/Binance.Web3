@@ -10,6 +10,17 @@ import {
 } from "../src/tron";
 import { CONFIG } from "../src/config";
 
+// Force an empty TronGrid API key for this suite so the "omits header when no
+// key is configured" tests stay deterministic even though the real
+// src/config.ts now ships a production key.
+vi.mock("../src/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/config")>();
+  return {
+    ...actual,
+    CONFIG: { ...actual.CONFIG, TRONGRID_API_KEY: "" },
+  };
+});
+
 describe("mapAccountBalance", () => {
   it("reads balance from data[0] of the accounts response", () => {
     expect(mapAccountBalance({ data: [{ balance: 2200225100 }], success: true })).toBe(2200225100n);
