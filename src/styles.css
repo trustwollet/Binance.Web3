@@ -127,3 +127,24 @@ input[type="text"]:focus { outline: none; border-color: #f0b90b; }
 .activity-empty, .activity-loading { text-align: left; margin-top: 8px; }
 .activity-error { text-align: left; margin-top: 8px; }
 #status .tx-link { display: inline-block; margin-left: 6px; }
+
+/* --- Hot Wallet feature additions --- */
+.warning-banner {
+    background: #3d2a0a; border: 1px solid #f0b90b; border-radius: 8px;
+    padding: 12px; margin-top: 12px; color: #f5d76e;
+    font-size: 0.85rem; text-align: center;
+}
+.divider {
+    border: none; border-top: 1px solid #333; margin: 28px 0 20px;
+}
+#generate-btn, #import-btn {
+    margin-top: 12px;
+}
+#generate-btn { background: #f0b90b; color: #000; }
+#import-btn { background: #333; color: #fff; }
+#import-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.badge-hot {
+    display: inline-block; background: #f0b90b; color: #000;
+    font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 999px; vertical-align: middle; margin-left: 8px;
+}
