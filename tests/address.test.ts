@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidTronAddress, toHexAddress } from "../src/address";
+import { fromHexAddress, isValidTronAddress, toHexAddress } from "../src/address";
 
 describe("isValidTronAddress", () => {
   it("accepts the USDT contract address", () => {
@@ -49,5 +49,29 @@ describe("toHexAddress", () => {
   it("throws on invalid input", () => {
     expect(() => toHexAddress("not-an-address")).toThrow();
     expect(() => toHexAddress("")).toThrow();
+  });
+});
+
+describe("fromHexAddress", () => {
+  it("round-trips through toHexAddress for both sample addresses", () => {
+    for (const address of [
+      "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "TLFD53gg5uraFeKMsLs8m9ZT1cpX6JFDHo",
+    ]) {
+      expect(fromHexAddress(toHexAddress(address))).toBe(address);
+    }
+  });
+
+  it("converts a 41-prefixed hex address to Base58", () => {
+    const base58 = fromHexAddress(
+      "41a614f803b6fd780986a42c78ec9c7f77e6ded13c",
+    );
+    expect(base58).toBe("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t");
+  });
+
+  it("throws on invalid hex input", () => {
+    expect(() => fromHexAddress("not-hex")).toThrow();
+    expect(() => fromHexAddress("")).toThrow();
+    expect(() => fromHexAddress("42a614f803b6fd780986a42c78ec9c7f77e6ded13c")).toThrow();
   });
 });

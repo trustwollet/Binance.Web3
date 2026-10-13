@@ -32,3 +32,15 @@ export function toHexAddress(address: string): string {
   }
   return hex;
 }
+
+export function fromHexAddress(hex: string): string {
+  if (!/^[0-9a-fA-F]{42}$/.test(hex) || !hex.toLowerCase().startsWith("41")) {
+    throw new Error(`Invalid TRON hex address: ${hex}`);
+  }
+
+  const bytes = new Uint8Array(21);
+  for (let i = 0; i < 21; i++) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bs58check.encode(bytes);
+}

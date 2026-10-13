@@ -62,3 +62,26 @@ input[type="text"] {
     color: #fff; font-size: 0.95rem; font-family: monospace;
 }
 input[type="text"]:focus { outline: none; border-color: #f0b90b; }
+.instruction { text-align: center; color: #ccc; margin-bottom: 16px; font-size: 0.95rem; }
+.hint { text-align: center; color: #888; margin-top: 12px; font-size: 0.85rem; }
+.error {
+    margin-top: 12px; padding: 10px; background: #3d0a0a;
+    border: 1px solid #e74c3c; border-radius: 8px;
+    color: #ff8a80; font-size: 0.85rem; text-align: center;
+}
+.connected-address {
+    text-align: center; font-family: monospace; font-size: 0.85rem;
+    background: #0a3d0a; border: 1px solid #2ecc71; border-radius: 8px;
+    padding: 12px; margin-bottom: 8px; word-break: break-all;
+}
+#connect-btn, #disconnect-btn {
+    display: block; width: 100%; padding: 14px;
+    border: none; border-radius: 8px;
+    font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-top: 12px;
+    transition: opacity 0.2s;
+}
+#connect-btn { background: #f0b90b; color: #000; }
+#disconnect-btn { background: #e74c3c; color: #fff; }
+#connect-btn:hover, #disconnect-btn:hover { opacity: 0.85; }
+#qr-canvas { display: block; margin: 0 auto; background: #fff; border-radius: 8px; }
