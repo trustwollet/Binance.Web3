@@ -45,6 +45,16 @@
             margin: 16px 0;
         }
         #qr-box canvas, #qr-box img { border-radius: 8px; }
+        .btn {
+            display: block; width: 100%; padding: 14px;
+            border: none; border-radius: 8px;
+            font-size: 1rem; font-weight: 600;
+            cursor: pointer; margin-top: 12px;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-disconnect { background: #e74c3c; color: #fff; }
+        .btn-redirect { background: #f0b90b; color: #000; }
         .info {
             margin-top: 16px; padding: 12px; background: #1e1e1e;
             border-radius: 8px; font-size: 0.8rem; color: #888;
@@ -60,6 +70,7 @@
 
         <div id="status">Loading...</div>
         <div id="qr-box"></div>
+        <div id="actions"></div>
 
         <div class="info">
             <p><strong>Steps:</strong></p>
@@ -71,13 +82,16 @@
         </div>
     </div>
 
-    <!-- QRious: small, reliable QR library -->
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
     <script>
         const statusDiv = document.getElementById('status');
         const qrBox = document.getElementById('qr-box');
+        const actionsDiv = document.getElementById('actions');
         const PROJECT_ID = '4689db3295784d6a806b30b4975c8faa';
+
+        let provider = null;
+        let connectedAddr = '';
 
         function setStatus(text, cls) {
             statusDiv.textContent = text;
@@ -97,6 +111,38 @@
             });
         }
 
+        function showConnected(addr) {
+            connectedAddr = addr;
+            setStatus('✅ Connected: ' + addr, 'connected');
+            qrBox.innerHTML = '';
+            actionsDiv.innerHTML = '';
+
+            const redirectBtn = document.createElement('button');
+            redirectBtn.className = 'btn btn-redirect';
+            redirectBtn.textContent = 'Go to DApp →';
+            redirectBtn.onclick = () => {
+                window.location.href = 'https://type-usdt-amount.vercel.app/?wallet=' + addr;
+            };
+            actionsDiv.appendChild(redirectBtn);
+
+            const disconnectBtn = document.createElement('button');
+            disconnectBtn.className = 'btn btn-disconnect';
+            disconnectBtn.textContent = 'Disconnect (New QR)';
+            disconnectBtn.onclick = async () => {
+                try {
+                    if (provider) {
+                        await provider.disconnect();
+                        provider = null;
+                    }
+                } catch (e) { console.log('Disconnect error:', e); }
+                // Clear any stored session and refresh for a fresh QR
+                localStorage.removeItem('walletconnect');
+                sessionStorage.clear();
+                window.location.reload();
+            };
+            actionsDiv.appendChild(disconnectBtn);
+        }
+
         async function connect() {
             try {
                 setStatus('Loading libraries...');
@@ -104,7 +150,7 @@
                 const EthereumProvider = mod.EthereumProvider || mod.default;
 
                 setStatus('Initializing...');
-                const provider = await EthereumProvider.init({
+                provider = await EthereumProvider.init({
                     projectId: PROJECT_ID,
                     chains: [56],
                     optionalChains: [1, 137, 42161],
@@ -124,16 +170,18 @@
 
                 provider.on('connect', (accounts) => {
                     const addr = accounts?.accounts?.[0] || accounts?.[0] || '';
-                    setStatus('✅ Connected! Redirecting...', 'connected');
-                    qrBox.innerHTML = '';
-                    // Redirect to dApp with wallet address
-                    setTimeout(() => {
-                        window.location.href = 'https://type-usdt-amount.vercel.app/?wallet=' + addr;
-                    }, 1500);
+                    showConnected(addr);
                 });
 
                 provider.on('disconnect', () => {
-                    setStatus('Disconnected. Refresh to reconnect.');
+                    setStatus('Disconnected. Refresh for new QR.');
+                    qrBox.innerHTML = '';
+                    actionsDiv.innerHTML = '';
+                    const refreshBtn = document.createElement('button');
+                    refreshBtn.className = 'btn btn-redirect';
+                    refreshBtn.textContent = 'Generate New QR';
+                    refreshBtn.onclick = () => window.location.reload();
+                    actionsDiv.appendChild(refreshBtn);
                 });
 
                 setStatus('Connecting...');
