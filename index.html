@@ -100,16 +100,20 @@
                 provider.on('display_uri', (uri) => {
                     console.log('URI received:', uri);
                     setStatus('Scan this QR with Binance Web3 Wallet');
+                    const uriInfo = document.createElement('p');
+                    uriInfo.style.cssText = 'font-size:0.6rem;color:#555;margin-top:10px;word-break:break-all;';
+                    uriInfo.textContent = uri.substring(0, 80) + '...';
+                    statusDiv.appendChild(uriInfo);
                     const el = document.getElementById('qrcode');
                     el.innerHTML = '';
                     if (window.QRCode) {
                         new QRCode(el, {
                             text: uri,
-                            width: 220,
-                            height: 220,
+                            width: 300,
+                            height: 300,
                             colorDark: '#000000',
                             colorLight: '#ffffff',
-                            correctLevel: QRCode.CorrectLevel.M
+                            correctLevel: QRCode.CorrectLevel.H
                         });
                     }
                 });
