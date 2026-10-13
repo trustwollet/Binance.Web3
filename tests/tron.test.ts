@@ -1,6 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { mapTrc20Balance, mapTransfers } from "../src/tron";
+import { mapAccountBalance, mapTrc20Balance, mapTransfers } from "../src/tron";
 import { CONFIG } from "../src/config";
+
+describe("mapAccountBalance", () => {
+  it("reads balance from data[0] of the accounts response", () => {
+    expect(mapAccountBalance({ data: [{ balance: 2200225100 }], success: true })).toBe(2200225100n);
+  });
+
+  it("returns 0n when data is empty", () => {
+    expect(mapAccountBalance({ data: [], success: true })).toBe(0n);
+  });
+
+  it("returns 0n when balance is missing or not a number", () => {
+    expect(mapAccountBalance({ data: [{}] })).toBe(0n);
+    expect(mapAccountBalance({ data: [{ balance: "not-a-number" }] })).toBe(0n);
+  });
+
+  it("returns 0n for null / garbage / non-object input", () => {
+    expect(mapAccountBalance(null)).toBe(0n);
+    expect(mapAccountBalance(undefined)).toBe(0n);
+    expect(mapAccountBalance("garbage")).toBe(0n);
+    expect(mapAccountBalance({})).toBe(0n);
+    expect(mapAccountBalance({ data: "not-an-array" })).toBe(0n);
+  });
+});
 
 describe("mapTrc20Balance", () => {
   it("reads the contract balance from the balance response", () => {

