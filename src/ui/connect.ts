@@ -1,4 +1,5 @@
-import QRious from "qrious";
+import QRCode from "qrcode";
+import binanceLogoUrl from "../assets/binance-logo.png";
 
 function esc(value: string): string {
   return value
@@ -49,38 +50,20 @@ function roundRectPath(
   ctx.closePath();
 }
 
-function drawBinanceLogo(canvas: HTMLCanvasElement): void {
+function drawBinanceLogo(canvas: HTMLCanvasElement, logo: HTMLImageElement): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
-  const box = 52;
-  const radius = 10;
+  const box = 56;
+  const radius = 12;
+  const logoSize = 40;
 
   ctx.fillStyle = "#ffffff";
   roundRectPath(ctx, cx - box / 2, cy - box / 2, box, box, radius);
   ctx.fill();
 
-  ctx.fillStyle = "#F0B90B";
-  const diamond = (x: number, y: number, s: number): void => {
-    ctx.beginPath();
-    ctx.moveTo(x, y - s);
-    ctx.lineTo(x + s, y);
-    ctx.lineTo(x, y + s);
-    ctx.lineTo(x - s, y);
-    ctx.closePath();
-    ctx.fill();
-  };
-  const u = 5.8;
-  diamond(cx, cy, 4.4);
-  diamond(cx, cy - u, 4.4);
-  diamond(cx, cy + u, 4.4);
-  diamond(cx - u, cy, 4.4);
-  diamond(cx + u, cy, 4.4);
-  diamond(cx - u, cy - u, 3.5);
-  diamond(cx + u, cy - u, 3.5);
-  diamond(cx - u, cy + u, 3.5);
-  diamond(cx + u, cy + u, 3.5);
+  ctx.drawImage(logo, cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize);
 }
 
 function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): void {
@@ -153,7 +136,7 @@ function renderReceivePage(opts: ConnectViewOpts): void {
       <p class="receive-subtitle">Others can scan with Binance App to pay</p>
       <div class="receive-card">
         <div id="qr-box">
-          <canvas id="qr-canvas" width="280" height="280"></canvas>
+          <canvas id="qr-canvas" width="320" height="320"></canvas>
         </div>
         <div class="receive-info">
           ${INFO_ICON}
@@ -188,17 +171,17 @@ function renderReceivePage(opts: ConnectViewOpts): void {
 
   const canvas = document.querySelector<HTMLCanvasElement>("#qr-canvas");
   if (canvas && opts.qrUri) {
-    new QRious({
-      element: canvas,
-      value: opts.qrUri,
-      size: 280,
-      level: "M",
-      background: "#ffffff",
-      foreground: "#000000",
-      padding: 16,
+    QRCode.toCanvas(canvas, opts.qrUri, {
+      width: 320,
+      margin: 2,
+      errorCorrectionLevel: "M",
+      color: { dark: "#000000", light: "#ffffff" },
     });
-    drawBinanceLogo(canvas);
     wireQrActions(canvas, opts.qrUri);
+
+    const logo = new Image();
+    logo.onload = () => drawBinanceLogo(canvas, logo);
+    logo.src = binanceLogoUrl;
   }
 }
 

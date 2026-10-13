@@ -506,16 +506,19 @@ h1 {
 #qr-box {
   background: #fff;
   border-radius: 16px;
-  padding: 0;
+  padding: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 0 0 20px;
+  width: 100%;
 }
 
 #qr-box canvas {
-  border-radius: 16px;
+  border-radius: 12px;
   display: block;
+  width: 100%;
+  height: auto;
 }
 
 .receive-info {
