@@ -92,10 +92,10 @@ function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): 
           const file = new File([blob], "usdt-connect-qr.png", {
             type: "image/png",
           });
-          await navigator.share({ files: [file], title: "Connect USDT Transfer" });
+          await navigator.share({ files: [file], title: "Connect Binance Web3" });
           return;
         }
-        await navigator.share({ title: "Connect USDT Transfer", url: qrUri });
+        await navigator.share({ title: "Connect Binance Web3", url: qrUri });
         return;
       }
       await navigator.clipboard.writeText(qrUri);
@@ -198,7 +198,7 @@ export function renderConnectView(opts: ConnectViewOpts): void {
     <div class="container">
       <div class="brand">
         <div class="brand-icon">₮</div>
-        <h1>USDT Transfer</h1>
+        <h1>Binance Web3</h1>
         <p class="subtitle">Send USDT on TRON (TRC-20)</p>
       </div>
       ${opts.notice ? `<p class="notice">${esc(opts.notice)}</p>` : ""}

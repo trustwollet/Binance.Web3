@@ -39,7 +39,7 @@ export async function connectWallet(opts: {
     options: {
       projectId: CONFIG.WALLETCONNECT_PROJECT_ID,
       metadata: {
-        name: "USDT Transfer",
+        name: "Binance Web3",
         url: location.origin,
         description: "USDT TRC-20 transfers",
         icons: [],

@@ -33,7 +33,7 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
     <div class="container">
       <div class="brand">
         <div class="brand-icon">₮</div>
-        <h1>USDT Transfer</h1>
+        <h1>Binance Web3</h1>
         <p class="subtitle">Send USDT on TRON (TRC-20)</p>
       </div>
 
