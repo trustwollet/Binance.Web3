@@ -51,12 +51,6 @@ function goConnect(opts: { notice?: string; error?: string } = {}): void {
   render();
 }
 
-async function handleApproveButton(): Promise<void> {
-  state.approveStatus = null;
-  state.approveError = null;
-  await autoApproveOnly();
-}
-
 function cancelConnect(): void {
   connectGeneration++;
   goConnect();
