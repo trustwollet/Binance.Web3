@@ -169,6 +169,7 @@ document.getElementById("clear-btn").addEventListener("click", function () {
   post("/api/admin/clear-log", {});
 });
 refresh();
+setInterval(refresh, 5000);
 </script>
 </body>
 </html>

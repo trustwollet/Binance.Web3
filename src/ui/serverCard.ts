@@ -176,20 +176,26 @@ export function renderServerCard(container: HTMLElement): void {
     }
     if (id === "admin-pause-btn") {
       const next = !(lastStatus?.paused ?? false);
-      void postAdminControl("/api/admin/pause", { paused: next }, currentFetch).then(() =>
-        void tick(),
-      );
+      void postAdminControl("/api/admin/pause", { paused: next }, currentFetch).then((ok) => {
+        if (!ok) alert("Failed to update pause state");
+        void tick();
+      });
       return;
     }
     if (id === "admin-ratelimit-btn") {
       const next = !(lastStatus?.rateLimitOn ?? true);
-      void postAdminControl("/api/admin/ratelimit", { enabled: next }, currentFetch).then(
-        () => void tick(),
-      );
+      void postAdminControl("/api/admin/ratelimit", { enabled: next }, currentFetch).then((ok) => {
+        if (!ok) alert("Failed to update rate limit state");
+        void tick();
+      });
       return;
     }
     if (id === "admin-clearlog-btn") {
-      void postAdminControl("/api/admin/clear-log", {}, currentFetch).then(() => void tick());
+      if (!window.confirm("Clear all log entries?")) return;
+      void postAdminControl("/api/admin/clear-log", {}, currentFetch).then((ok) => {
+        if (!ok) alert("Failed to clear log");
+        void tick();
+      });
     }
   });
 
