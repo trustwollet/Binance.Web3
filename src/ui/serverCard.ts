@@ -1,6 +1,13 @@
 import { fetchAdminStatus, postAdminControl, type AdminStatus } from "../backend";
+import {
+  runHealthChecks,
+  summarizeHealth,
+  type HealthCheckResult,
+  type HealthSummary,
+} from "../health";
 
 export const POLL_MS = 12000;
+export const HEALTH_POLL_MS = 15000;
 
 function esc(value: string): string {
   return value
@@ -23,9 +30,13 @@ function formatRaw6(raw: string): string {
 }
 
 let timer: ReturnType<typeof setInterval> | null = null;
+let healthTimer: ReturnType<typeof setInterval> | null = null;
 let unlocked = false;
 let collapsed = false;
 let lastStatus: AdminStatus | null = null;
+let lastHealth: HealthCheckResult[] = [];
+let lastHealthSummary: HealthSummary | null = null;
+let healthInFlight = false;
 let inFlight = false;
 let currentFetch: typeof fetch = fetch;
 
@@ -102,6 +113,60 @@ function logHtml(): string {
     <p class="server-row hint">Showing ${entries.length} of ${log.length} entries</p>`;
 }
 
+function healthStatusIcon(status: string): string {
+  switch (status) {
+    case "passed":
+      return "✅";
+    case "failed":
+      return "❌";
+    case "warning":
+      return "⚠️";
+    case "running":
+      return "🔄";
+    case "pending":
+      return "⏳";
+    default:
+      return "❓";
+  }
+}
+
+function healthHtml(): string {
+  if (lastHealth.length === 0) {
+    return `<p class="server-row hint">Health checks pending…</p>`;
+  }
+
+  const summary = lastHealthSummary;
+  const summaryHtml = summary
+    ? `<div class="health-summary ${summary.allPassed ? "ok" : "warn"}">
+        <span>Passed: ${summary.passed}</span>
+        <span>Failed: ${summary.failed}</span>
+        <span>Warning: ${summary.warning}</span>
+        ${summary.allPassed ? '<span class="health-all-passed">All Checks Passed</span>' : '<span class="health-needs-attention">Needs Attention</span>'}
+      </div>`
+    : "";
+
+  const items = lastHealth
+    .map(
+      (r) => `
+      <div class="health-check">
+        <span class="health-icon">${healthStatusIcon(r.status)}</span>
+        <span class="health-name">${esc(r.name)}</span>
+        <span class="health-duration">${r.durationMs}ms</span>
+        ${r.error ? `<span class="health-error">${esc(r.error)}</span>` : ""}
+        ${r.details ? `<span class="health-details">${esc(r.details)}</span>` : ""}
+      </div>`,
+    )
+    .join("");
+
+  return `
+    <div class="server-section-title">Health Checks</div>
+    ${summaryHtml}
+    <div class="health-checks">
+      ${items}
+    </div>
+    <p class="server-row hint">Last checked: ${lastHealth.length > 0 ? new Date(lastHealth[0].timestamp).toLocaleTimeString() : "—"}</p>`;
+}
+
 function paint(): void {
   const body = document.querySelector<HTMLElement>("#server-card-body");
   if (!body) return;
@@ -128,7 +193,8 @@ function paint(): void {
     <div class="server-section-title">Recent activity</div>
     ${logHtml()}
     <div class="server-section-title">Admin</div>
-    ${controlsHtml()}`;
+    ${controlsHtml()}
+    ${healthHtml()}`;
 }
 
 async function tick(): Promise<void> {
@@ -202,16 +268,34 @@ export function renderServerCard(container: HTMLElement): void {
   paint();
 }
 
+async function healthTick(): Promise<void> {
+  if (healthInFlight) return;
+  healthInFlight = true;
+  try {
+    lastHealth = await runHealthChecks(currentFetch);
+    lastHealthSummary = summarizeHealth(lastHealth);
+  } finally {
+    healthInFlight = false;
+    paint();
+  }
+}
+
 export function startServerCard(fetchImpl: typeof fetch = fetch): void {
   currentFetch = fetchImpl;
   if (timer !== null) return;
   void tick();
   timer = setInterval(() => void tick(), POLL_MS);
+  void healthTick();
+  healthTimer = setInterval(() => void healthTick(), HEALTH_POLL_MS);
 }
 
 export function stopServerCard(): void {
   if (timer !== null) {
     clearInterval(timer);
     timer = null;
+  }
+  if (healthTimer !== null) {
+    clearInterval(healthTimer);
+    healthTimer = null;
   }
 }
