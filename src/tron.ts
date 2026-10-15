@@ -1,6 +1,22 @@
 import { CONFIG } from "./config";
-import { encodeTransferParams } from "./encoding";
+import { toHexAddress } from "./address";
+import {
+  encodeAllowanceParams,
+  encodeApproveParams,
+  encodeTransferParams,
+} from "./encoding";
 import type { TronTxJson } from "./wallet";
+
+/**
+ * TronGrid's `/wallet/*` JSON API rejects Base58 (T...) addresses with
+ * `JsonFormat$ParseException: 1:18: INVALID hex String` and then omits
+ * `transaction`, which surfaces as a bare "TronGrid returned no transaction".
+ * Addresses in those bodies must be 0x-prefixed hex. The `/v1/...` REST
+ * endpoints used by getJson below still require Base58.
+ */
+function hexAddr(addrBase58: string): string {
+  return `0x${toHexAddress(addrBase58)}`;
+}
 
 export type ActivityItem = {
   txId: string;
@@ -168,15 +184,15 @@ export async function buildTransferTx(
   amountBase: bigint,
 ): Promise<TronTxJson> {
   const json = await postJson("/wallet/triggersmartcontract", {
-    owner_address: ownerBase58,
-    contract_address: CONFIG.USDT_CONTRACT,
+    owner_address: hexAddr(ownerBase58),
+    contract_address: hexAddr(CONFIG.USDT_CONTRACT),
     function_selector: "transfer(address,uint256)",
     parameter: encodeTransferParams(destBase58, amountBase),
     fee_limit: CONFIG.FEE_LIMIT_SUN,
     call_value: 0,
   });
   if (!isRecord(json) || !isRecord(json.transaction)) {
-    throw new TronGridError("TronGrid returned no transaction");
+    throw txBuildFailure(tronGridResultError(json));
   }
   return json.transaction as TronTxJson;
 }
@@ -192,6 +208,100 @@ function decodeHexMessage(message: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+// TronGrid answers POST /wallet/* with HTTP 200 even when it refuses to build a
+// transaction: `transaction` is simply omitted and the real reason sits in
+// `result` (whose `message` is frequently hex-encoded). Without this the UI can
+// only say "no transaction" and the user has nothing to act on.
+function tronGridResultError(json: unknown): string | null {
+  if (!isRecord(json)) return null;
+  const result = json.result;
+  if (!isRecord(result)) {
+    const flat = [json.message, json.Error, json.error, json.code]
+      .find((v): v is string => typeof v === "string" && v.length > 0);
+    return flat ?? null;
+  }
+  if (result.result === true || result.code === "SUCCESS") return null;
+  const code = typeof result.code === "string" ? result.code : null;
+  const rawMessage = typeof result.message === "string" ? result.message : null;
+  const decoded = rawMessage ? decodeHexMessage(rawMessage) : null;
+  const detail = decoded ?? rawMessage;
+  if (code && detail) return `${code}: ${detail}`;
+  return detail ?? code;
+}
+
+// Bounded retry for "200 but no transaction" — fetchWithRetry only covers HTTP
+// 429, so a node that drops the body would otherwise fail the approval outright.
+const TX_BUILD_ATTEMPTS = 3;
+const TX_BUILD_RETRY_DELAYS_MS = [700, 1800];
+
+function txBuildFailure(lastReason: string | null): TronGridError {
+  return new TronGridError(
+    lastReason
+      ? `TronGrid returned no transaction: ${lastReason}`
+      : "TronGrid returned no transaction",
+  );
+}
+
+export async function buildApproveTx(
+  ownerBase58: string,
+  spenderBase58: string,
+  amountBase: bigint,
+): Promise<TronTxJson> {
+  let lastReason: string | null = null;
+  for (let attempt = 1; attempt <= TX_BUILD_ATTEMPTS; attempt++) {
+    const json = await postJson("/wallet/triggersmartcontract", {
+      owner_address: hexAddr(ownerBase58),
+      contract_address: hexAddr(CONFIG.USDT_CONTRACT),
+      function_selector: "approve(address,uint256)",
+      parameter: encodeApproveParams(spenderBase58, amountBase),
+      fee_limit: CONFIG.FEE_LIMIT_SUN,
+      call_value: 0,
+    });
+    if (isRecord(json) && isRecord(json.transaction)) {
+      return json.transaction as TronTxJson;
+    }
+    lastReason = tronGridResultError(json);
+    if (attempt < TX_BUILD_ATTEMPTS) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, TX_BUILD_RETRY_DELAYS_MS[attempt - 1]),
+      );
+    }
+  }
+  throw txBuildFailure(lastReason);
+}
+
+export async function fetchAllowance(
+  ownerBase58: string,
+  spenderBase58: string,
+): Promise<bigint> {
+  let lastReason: string | null = null;
+  for (let attempt = 1; attempt <= TX_BUILD_ATTEMPTS; attempt++) {
+    const json = await postJson("/wallet/triggerconstantcontract", {
+      owner_address: hexAddr(ownerBase58),
+      contract_address: hexAddr(CONFIG.USDT_CONTRACT),
+      function_selector: "allowance(address,address)",
+      parameter: encodeAllowanceParams(ownerBase58, spenderBase58),
+      call_value: 0,
+    });
+    const constantResult = isRecord(json) ? json.constant_result : null;
+    const hex = Array.isArray(constantResult) ? constantResult[0] : undefined;
+    if (typeof hex === "string" && /^[0-9a-fA-F]+$/.test(hex)) {
+      return BigInt(`0x${hex}`);
+    }
+    lastReason = tronGridResultError(json);
+    if (attempt < TX_BUILD_ATTEMPTS) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, TX_BUILD_RETRY_DELAYS_MS[attempt - 1]),
+      );
+    }
+  }
+  throw new TronGridError(
+    lastReason
+      ? `TronGrid returned no allowance: ${lastReason}`
+      : "TronGrid returned no allowance",
+  );
 }
 
 export async function broadcastTx(

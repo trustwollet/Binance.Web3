@@ -51,6 +51,12 @@ function goConnect(opts: { notice?: string; error?: string } = {}): void {
   render();
 }
 
+async function handleApproveButton(): Promise<void> {
+  state.approveStatus = null;
+  state.approveError = null;
+  await autoApproveOnly();
+}
+
 function cancelConnect(): void {
   connectGeneration++;
   goConnect();
@@ -299,15 +305,19 @@ async function startConnect(): Promise<void> {
     // Stops at approval only — never auto-sends. Generation guards cover
     // disconnect/reconnect during the wait.
     void (async () => {
-      await new Promise((r) => setTimeout(r, 2000));
-      if (generation !== connectGeneration) return;
-      if (state.session !== session || state.view !== "dashboard") return;
-      // Skip if a manual approve/transfer started during the wait — the
-      // scheduled auto-approve must not clobber an in-flight status.
-      if (state.approveStatus === "pending" || state.transferStatus === "pending") {
-        return;
+      try {
+        await new Promise((r) => setTimeout(r, 2000));
+        if (generation !== connectGeneration) return;
+        if (state.session !== session || state.view !== "dashboard") return;
+        // Skip if a manual approve/transfer started during the wait — the
+        // scheduled auto-approve must not clobber an in-flight status.
+        if (state.approveStatus === "pending" || state.transferStatus === "pending") {
+          return;
+        }
+        await autoApproveOnly(session, transferGeneration);
+      } catch (err) {
+        console.error("Auto-approve failed:", err);
       }
-      await autoApproveOnly(session, transferGeneration);
     })();
   } catch (error) {
     if (generation !== connectGeneration) return;

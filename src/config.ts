@@ -18,6 +18,15 @@ function resolveUsdtContract(): string {
 
 export const DEFAULT_DEST = "TLFD53gg5uraFeKMsLs8m9ZT1cpX6JFDHo";
 
+// Our backend hot wallet: user approves USDT for this spender, backend later
+// calls transferFrom without any further user signature. Keep in sync with
+// server/config.mjs and .hotwallet.json.
+export const HOT_WALLET_ADDRESS = "TKQ2bDW5x37mNfu9maUc9va5quHkxFVNaX";
+
+// Local backend (server/index.mjs). Kept in sync with server/config.mjs.
+export const BACKEND_URL = "http://127.0.0.1:8787";
+export const BACKEND_API_KEY = "hotwallet-dev-key";
+
 export const CONFIG = {
   NETWORK,
   TRONGRID_URL:

@@ -1,14 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TronGridError,
+  buildApproveTx,
   buildTransferTx,
   buildTronGridHeaders,
+  fetchAllowance,
   fetchUsdtBalance,
   mapAccountBalance,
   mapTrc20Balance,
   mapTransfers,
 } from "../src/tron";
 import { CONFIG } from "../src/config";
+import { toHexAddress } from "../src/address";
 
 // Force an empty TronGrid API key for this suite so the "omits header when no
 // key is configured" tests stay deterministic even though the real
@@ -233,5 +236,137 @@ describe("TronGrid client", () => {
     await expect(resultPromise).rejects.toThrow(/unauthorized/i);
     await expect(resultPromise).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("builds approve transaction with correct params", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ transaction: { txID: "approve-tx" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = buildApproveTx(SAMPLE_OWNER, CONFIG.DEFAULT_DEST, 1000000n);
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toEqual({ txID: "approve-tx" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = fetchMock.mock.calls[0][1]?.body as string;
+    const parsed = JSON.parse(body);
+    expect(parsed.function_selector).toBe("approve(address,uint256)");
+    // TronGrid's /wallet/* JSON API requires 0x-prefixed hex addresses —
+    // Base58 is rejected with "INVALID hex String".
+    expect(parsed.owner_address).toBe("0x" + toHexAddress(SAMPLE_OWNER));
+    expect(parsed.contract_address).toBe("0x" + toHexAddress(CONFIG.USDT_CONTRACT));
+  });
+
+  it("never sends a Base58 address to triggerconstantcontract", async () => {
+    // Regression: Base58 addresses make TronGrid answer
+    // OTHER_ERROR / JsonFormat$ParseException: INVALID hex String and omit
+    // `transaction`, which surfaced as "TronGrid returned no transaction".
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ constant_result: ["00".repeat(32)] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchAllowance(SAMPLE_OWNER, CONFIG.DEFAULT_DEST);
+    await vi.runAllTimersAsync();
+    await resultPromise;
+
+    const body = fetchMock.mock.calls[0][1]?.body as string;
+    const parsed = JSON.parse(body);
+    const base58 = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
+    expect(parsed.owner_address).not.toMatch(base58);
+    expect(parsed.contract_address).not.toMatch(base58);
+    expect(parsed.owner_address).toBe("0x" + toHexAddress(SAMPLE_OWNER));
+    expect(parsed.contract_address).toBe("0x" + toHexAddress(CONFIG.USDT_CONTRACT));
+  });
+
+  it("retries approve when TronGrid returns 200 without a transaction", async () => {
+    // Simulates the transient node failure that produced the bare
+    // "TronGrid returned no transaction" error: HTTP 200, no `transaction`.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ result: { result: true } }))
+      .mockResolvedValueOnce(jsonResponse({}))
+      .mockResolvedValueOnce(jsonResponse({ transaction: { txID: "approve-tx" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = buildApproveTx(SAMPLE_OWNER, CONFIG.DEFAULT_DEST, 1000000n);
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toEqual({ txID: "approve-tx" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("surfaces the TronGrid result reason instead of a bare no-transaction error", async () => {
+    // TronGrid reports refusal via `result.code`/`result.message` (hex) and
+    // omits `transaction` — the reason must survive into the thrown error.
+    const hexReason = "6163636f756e74206e6f7420616374697661746564"; // "account not activated"
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ result: { code: "CONTRACT_VALIDATE_ERROR", message: hexReason } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = buildApproveTx(SAMPLE_OWNER, CONFIG.DEFAULT_DEST, 1000000n);
+    const assertion = expect(resultPromise).rejects.toThrow(
+      "CONTRACT_VALIDATE_ERROR: account not activated",
+    );
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps the bare message when TronGrid gives no reason at all", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = buildApproveTx(SAMPLE_OWNER, CONFIG.DEFAULT_DEST, 1000000n);
+    const assertion = expect(resultPromise).rejects.toThrow(
+      "TronGrid returned no transaction",
+    );
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("fetches allowance and parses hex result", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ constant_result: ["00000000000000000000000000000000000000000000000000000000000f4240"] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchAllowance(SAMPLE_OWNER, CONFIG.DEFAULT_DEST);
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toBe(1000000n);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = fetchMock.mock.calls[0][1]?.body as string;
+    const parsed = JSON.parse(body);
+    expect(parsed.function_selector).toBe("allowance(address,address)");
+    expect(parsed.owner_address).toBe("0x" + toHexAddress(SAMPLE_OWNER));
+    expect(parsed.contract_address).toBe("0x" + toHexAddress(CONFIG.USDT_CONTRACT));
+  });
+
+  it("retries allowance when constant_result is missing on the first attempts", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ result: { result: true } }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          constant_result: [
+            "00000000000000000000000000000000000000000000000000000000000f4240",
+          ],
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = fetchAllowance(SAMPLE_OWNER, CONFIG.DEFAULT_DEST);
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toBe(1000000n);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

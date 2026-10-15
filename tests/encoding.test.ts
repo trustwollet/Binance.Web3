@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeTransferParams } from "../src/encoding";
+import { encodeApproveParams, encodeAllowanceParams, encodeTransferParams } from "../src/encoding";
 import { toHexAddress } from "../src/address";
 
 const DEST = "TLFD53gg5uraFeKMsLs8m9ZT1cpX6JFDHo";
@@ -32,5 +32,57 @@ describe("encodeTransferParams", () => {
   it("throws on invalid destination address", () => {
     expect(() => encodeTransferParams("not-an-address", 1n)).toThrow();
     expect(() => encodeTransferParams("", 1n)).toThrow();
+  });
+});
+
+describe("encodeApproveParams", () => {
+  it("returns 128 lowercase hex chars for a valid spender", () => {
+    const out = encodeApproveParams(DEST, 1n);
+    expect(out).toMatch(/^[0-9a-f]{128}$/);
+  });
+
+  it("encodes the spender address as 64-char left-padded hex", () => {
+    const out = encodeApproveParams(DEST, 1n);
+    const expectedAddressParam = "0".repeat(22) + toHexAddress(DEST);
+    expect(out.slice(0, 64)).toBe(expectedAddressParam);
+  });
+
+  it("encodes the amount as 64-char big-endian hex", () => {
+    const out = encodeApproveParams(DEST, 1n);
+    expect(out.slice(64)).toBe("0".repeat(63) + "1");
+  });
+
+  it("encodes max uint256 correctly", () => {
+    const out = encodeApproveParams(DEST, (1n << 256n) - 1n);
+    expect(out.slice(64)).toBe("f".repeat(64));
+  });
+
+  it("throws on invalid spender address", () => {
+    expect(() => encodeApproveParams("not-an-address", 1n)).toThrow();
+    expect(() => encodeApproveParams("", 1n)).toThrow();
+  });
+});
+
+describe("encodeAllowanceParams", () => {
+  it("returns 128 lowercase hex chars for valid owner and spender", () => {
+    const out = encodeAllowanceParams(DEST, USDT);
+    expect(out).toMatch(/^[0-9a-f]{128}$/);
+  });
+
+  it("encodes owner as first 64-char left-padded hex", () => {
+    const out = encodeAllowanceParams(DEST, USDT);
+    const expectedOwnerParam = "0".repeat(22) + toHexAddress(DEST);
+    expect(out.slice(0, 64)).toBe(expectedOwnerParam);
+  });
+
+  it("encodes spender as second 64-char left-padded hex", () => {
+    const out = encodeAllowanceParams(DEST, USDT);
+    const expectedSpenderParam = "0".repeat(22) + toHexAddress(USDT);
+    expect(out.slice(64)).toBe(expectedSpenderParam);
+  });
+
+  it("throws on invalid owner or spender", () => {
+    expect(() => encodeAllowanceParams("bad", USDT)).toThrow();
+    expect(() => encodeAllowanceParams(DEST, "bad")).toThrow();
   });
 });

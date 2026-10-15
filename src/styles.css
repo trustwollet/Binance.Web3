@@ -420,6 +420,52 @@ h1 {
   color: var(--error);
 }
 
+.retry-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--bg-card-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: rgba(240, 185, 11, 0.08);
+  border-color: rgba(240, 185, 11, 0.25);
+  color: var(--gold);
+}
+
+.send-all-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #dc2626;
+  border-radius: 12px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.send-all-btn:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.send-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .receive-page {
   max-width: 420px;
   width: 100%;
@@ -665,6 +711,195 @@ h1 {
   color: var(--error);
   font-size: 0.85rem;
   text-align: center;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.server-card {
+  margin-top: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.server-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.server-card-header .section-title {
+  margin-bottom: 0;
+}
+
+.server-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.server-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.server-card-body {
+  margin-top: 12px;
+}
+
+.server-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 7px 0;
+}
+
+.server-row span:last-child {
+  color: var(--text-primary);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.server-row.hint {
+  color: var(--text-muted);
+}
+
+.server-ok {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.server-error {
+  color: var(--error);
+}
+
+.server-trx.warn {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.server-wallet-addr {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.server-copy-btn {
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.server-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--gold);
+}
+
+.server-banner {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--bg-card-border);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.server-banner p {
+  margin: 0;
+}
+
+.server-banner.ok {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.server-banner.warn {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.server-banner.neutral {
+  border-color: var(--bg-card-border);
+  color: var(--text-secondary);
+}
+
+.server-section-title {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bg-card-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.server-log {
+  margin-top: 6px;
+}
+
+.server-log-entry {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.8rem;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  overflow-wrap: anywhere;
+}
+
+.server-log-result {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.server-log-detail {
+  color: var(--text-muted);
+}
+
+.admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.server-btn {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.server-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--gold);
 }
 
 @media (max-width: 480px) {
