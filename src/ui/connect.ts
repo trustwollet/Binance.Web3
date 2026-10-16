@@ -183,15 +183,29 @@ function renderReceivePage(opts: ConnectViewOpts): void {
     document.querySelector("#copy-qr-btn")?.addEventListener("click", async () => {
       const btn = document.querySelector<HTMLButtonElement>("#copy-qr-btn");
       if (!btn || !opts.qrUri) return;
-      try {
-        await navigator.clipboard.writeText(opts.qrUri);
+      const showFeedback = (msg: string) => {
         const prev = btn.textContent;
-        btn.textContent = "Link copied";
+        btn.textContent = msg;
         setTimeout(() => {
           btn.textContent = prev;
         }, 1500);
+      };
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(opts.qrUri);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = opts.qrUri;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+        showFeedback("Link copied");
       } catch {
-        /* clipboard unavailable — nothing more to do */
+        showFeedback("Copy failed");
       }
     });
 
