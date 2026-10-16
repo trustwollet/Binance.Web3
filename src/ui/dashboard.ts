@@ -1,5 +1,6 @@
 import { formatUsdtAmount } from "../amount";
 import { fetchTrxBalance, fetchUsdtActivity, fetchUsdtBalance } from "../tron";
+import { fetchAdminStatus } from "../backend";
 import { renderServerCard, startServerCard } from "./serverCard";
 import type { WalletSession } from "../wallet";
 
@@ -44,10 +45,16 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
         <p class="subtitle">Send USDT on TRON (TRC-20)</p>
       </div>
 
-      <div class="connected-chip">
-        <span class="chip-dot"></span>
-        <span class="chip-label">Connected</span>
-        <span class="chip-address">${esc(truncateAddress(opts.session.address))}</span>
+      <div class="status-row">
+        <div class="connected-chip">
+          <span class="chip-dot"></span>
+          <span class="chip-label">Connected</span>
+          <span class="chip-address">${esc(truncateAddress(opts.session.address))}</span>
+        </div>
+        <div class="server-chip" id="server-status-chip">
+          <span class="chip-dot" id="server-status-dot"></span>
+          <span class="chip-label" id="server-status-text">Checking…</span>
+        </div>
       </div>
 
       <div class="balance-cards">
@@ -179,6 +186,29 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
     renderServerCard(serverCardSection);
     startServerCard();
   }
+
+  const serverChip = document.querySelector<HTMLElement>("#server-status-chip");
+  const serverText = document.querySelector<HTMLElement>("#server-status-text");
+
+  async function updateServerStatus(): Promise<void> {
+    if (!serverChip || !serverText) return;
+    try {
+      const status = await fetchAdminStatus();
+      if (status) {
+        serverChip.className = "server-chip online";
+        serverText.textContent = "Server Online";
+      } else {
+        serverChip.className = "server-chip offline";
+        serverText.textContent = "Server Offline";
+      }
+    } catch {
+      serverChip.className = "server-chip offline";
+      serverText.textContent = "Server Offline";
+    }
+  }
+
+  void updateServerStatus();
+  setInterval(() => void updateServerStatus(), 10000);
 }
 
 async function refreshBalancesAndActivity(address: string): Promise<void> {

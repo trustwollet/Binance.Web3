@@ -242,6 +242,13 @@ h1 {
   font-weight: 400;
 }
 
+.status-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
 .connected-chip {
   display: inline-flex;
   align-items: center;
@@ -252,9 +259,61 @@ h1 {
   padding: 8px 14px;
   font-size: 0.8rem;
   color: var(--usdt-green-light);
-  margin-bottom: 20px;
-  width: 100%;
+  flex: 1;
   justify-content: center;
+  min-width: 0;
+}
+
+.server-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 9999px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  border: 1px solid var(--bg-card-border);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all var(--transition-normal);
+}
+
+.server-chip.online {
+  background: rgba(74, 222, 128, 0.10);
+  border-color: rgba(74, 222, 128, 0.25);
+  color: var(--success);
+}
+
+.server-chip.offline {
+  background: rgba(255, 107, 107, 0.10);
+  border-color: rgba(255, 107, 107, 0.25);
+  color: var(--error);
+}
+
+.server-chip.checking {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.server-chip.online .chip-dot {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+}
+
+.server-chip.offline .chip-dot {
+  background: var(--error);
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+  animation: none;
+}
+
+.server-chip.checking .chip-dot {
+  background: var(--warning);
 }
 
 .chip-dot {
