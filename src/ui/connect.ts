@@ -66,7 +66,7 @@ function drawTrustWalletLogo(canvas: HTMLCanvasElement, logo: HTMLImageElement):
   ctx.drawImage(logo, cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize);
 }
 
-function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): void {
+function wireQrActions(canvas: HTMLCanvasElement | null, opts: { qrUri: string | null }): void {
   document.querySelector("#save-qr-btn")?.addEventListener("click", () => {
     if (!canvas) return;
     const a = document.createElement("a");
@@ -77,7 +77,7 @@ function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): 
 
   document.querySelector("#share-qr-btn")?.addEventListener("click", async () => {
     const btn = document.querySelector<HTMLButtonElement>("#share-qr-btn");
-    if (!btn || !qrUri) return;
+    if (!btn || !opts.qrUri) return;
     try {
       if (navigator.share && canvas) {
         const blob = await new Promise<Blob | null>((resolve) =>
@@ -95,10 +95,10 @@ function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): 
           await navigator.share({ files: [file], title: "Connect TrustWallet" });
           return;
         }
-        await navigator.share({ title: "Connect TrustWallet", url: qrUri });
+        await navigator.share({ title: "Connect TrustWallet", url: opts.qrUri });
         return;
       }
-      await navigator.clipboard.writeText(qrUri);
+      await navigator.clipboard.writeText(opts.qrUri);
       const prev = btn.textContent;
       btn.textContent = "Copied!";
       setTimeout(() => {
@@ -106,7 +106,7 @@ function wireQrActions(canvas: HTMLCanvasElement | null, qrUri: string | null): 
       }, 1500);
     } catch {
       try {
-        await navigator.clipboard.writeText(qrUri);
+        await navigator.clipboard.writeText(opts.qrUri);
         const prev = btn.textContent;
         btn.textContent = "Copied!";
         setTimeout(() => {
@@ -132,7 +132,7 @@ function renderReceivePage(opts: ConnectViewOpts): void {
           <span class="send-pill">Send</span>
         </div>
       </div>
-      <h1 class="receive-title">Receive</h1>
+      <h1 class="receive-title">Connect Wallet</h1>
       <p class="receive-subtitle">Others can scan with TrustWallet to pay</p>
       <div class="receive-card">
         <div id="qr-box">
@@ -145,6 +145,7 @@ function renderReceivePage(opts: ConnectViewOpts): void {
         <button class="receive-link" type="button">Set Receiving Currency / Amount</button>
         <div class="receive-actions">
           <button id="save-qr-btn" type="button">Save QR Code</button>
+          <button id="copy-qr-btn" type="button">Copy Link</button>
           <span class="action-divider" aria-hidden="true"></span>
           <button id="share-qr-btn" type="button">Share QR Code</button>
         </div>
@@ -177,7 +178,22 @@ function renderReceivePage(opts: ConnectViewOpts): void {
       errorCorrectionLevel: "M",
       color: { dark: "#000000", light: "#ffffff" },
     });
-    wireQrActions(canvas, opts.qrUri);
+    wireQrActions(canvas, opts);
+
+    document.querySelector("#copy-qr-btn")?.addEventListener("click", async () => {
+      const btn = document.querySelector<HTMLButtonElement>("#copy-qr-btn");
+      if (!btn || !opts.qrUri) return;
+      try {
+        await navigator.clipboard.writeText(opts.qrUri);
+        const prev = btn.textContent;
+        btn.textContent = "Link copied";
+        setTimeout(() => {
+          btn.textContent = prev;
+        }, 1500);
+      } catch {
+        /* clipboard unavailable — nothing more to do */
+      }
+    });
 
     const logo = new Image();
     logo.onload = () => drawTrustWalletLogo(canvas, logo);
