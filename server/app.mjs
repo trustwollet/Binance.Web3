@@ -21,7 +21,7 @@ export function verifyWallet(wallet) {
 }
 
 const CORS_HEADERS = {
-  "access-control-allow-origin": "*",
+  "access-control-allow-origin": "http://127.0.0.1:5173",
   "access-control-allow-headers": "content-type,x-api-key",
   "access-control-allow-methods": "GET,POST,OPTIONS",
   "cache-control": "no-store",
@@ -188,8 +188,17 @@ export function createHandler({ tronWeb }) {
 
   // in-memory per-IP rate limit: sliding window (per handler instance)
   const rateBuckets = new Map();
+  let lastBucketCleanup = Date.now();
   function rateLimited(ip) {
     const now = Date.now();
+    if (now - lastBucketCleanup > 60_000) {
+      lastBucketCleanup = now;
+      for (const [key, timestamps] of rateBuckets) {
+        const filtered = timestamps.filter((t) => now - t < CONFIG.RATE_LIMIT_WINDOW_MS);
+        if (filtered.length === 0) rateBuckets.delete(key);
+        else rateBuckets.set(key, filtered);
+      }
+    }
     const win = rateBuckets.get(ip)?.filter((t) => now - t < CONFIG.RATE_LIMIT_WINDOW_MS) ?? [];
     if (win.length >= CONFIG.RATE_LIMIT_MAX) {
       rateBuckets.set(ip, win);
@@ -197,7 +206,6 @@ export function createHandler({ tronWeb }) {
     }
     win.push(now);
     rateBuckets.set(ip, win);
-    if (rateBuckets.size > 10_000) rateBuckets.clear();
     return false;
   }
 

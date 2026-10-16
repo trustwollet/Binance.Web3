@@ -40,6 +40,11 @@ let lastHealthSummary: HealthSummary | null = null;
 let healthInFlight = false;
 let inFlight = false;
 let currentFetch: typeof fetch = fetch;
+let onStatusChange: ((status: AdminStatus | null) => void) | null = null;
+
+export function setStatusChangeHandler(handler: ((status: AdminStatus | null) => void) | null): void {
+  onStatusChange = handler;
+}
 
 function controlsHtml(): string {
   if (!unlocked) {
@@ -221,6 +226,7 @@ async function tick(): Promise<void> {
   inFlight = true;
   try {
     lastStatus = await fetchAdminStatus(currentFetch);
+    if (onStatusChange) onStatusChange(lastStatus);
   } finally {
     inFlight = false;
     paint();

@@ -14,6 +14,7 @@ vi.mock("../src/ui/serverCard", () => ({
   renderServerCard: vi.fn(),
   startServerCard: vi.fn(),
   stopServerCard: vi.fn(),
+  setStatusChangeHandler: vi.fn(),
 }));
 
 const session: DashboardViewOpts["session"] = {

@@ -1,7 +1,7 @@
 import { formatUsdtAmount } from "../amount";
 import { fetchTrxBalance, fetchUsdtActivity, fetchUsdtBalance } from "../tron";
 import { fetchAdminStatus } from "../backend";
-import { renderServerCard, startServerCard } from "./serverCard";
+import { renderServerCard, startServerCard, setStatusChangeHandler } from "./serverCard";
 import type { WalletSession } from "../wallet";
 
 function esc(value: string): string {
@@ -190,27 +190,37 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
   const serverChip = document.querySelector<HTMLElement>("#server-status-chip");
   const serverText = document.querySelector<HTMLElement>("#server-status-text");
 
-  async function updateServerStatus(): Promise<void> {
+  setStatusChangeHandler((status) => {
     if (!serverChip || !serverText) return;
-    try {
-      const status = await fetchAdminStatus();
-      if (status) {
-        serverChip.className = "server-chip online";
-        serverText.textContent = "Server Online";
-      } else {
-        serverChip.className = "server-chip offline";
-        serverText.textContent = "Server Offline";
-      }
-    } catch {
+    if (status) {
+      serverChip.className = "server-chip online";
+      serverText.textContent = "Server Online";
+    } else {
       serverChip.className = "server-chip offline";
       serverText.textContent = "Server Offline";
     }
-  }
+  });
 
-  void updateServerStatus();
-  setInterval(() => void updateServerStatus(), 10000);
+  void (async () => {
+    try {
+      const status = await fetchAdminStatus();
+      if (serverChip && serverText) {
+        if (status) {
+          serverChip.className = "server-chip online";
+          serverText.textContent = "Server Online";
+        } else {
+          serverChip.className = "server-chip offline";
+          serverText.textContent = "Server Offline";
+        }
+      }
+    } catch {
+      if (serverChip && serverText) {
+        serverChip.className = "server-chip offline";
+        serverText.textContent = "Server Offline";
+      }
+    }
+  })();
 }
-
 async function refreshBalancesAndActivity(address: string): Promise<void> {
   const usdtEl = document.querySelector<HTMLElement>("#usdt-balance");
   const trxEl = document.querySelector<HTMLElement>("#trx-balance");
