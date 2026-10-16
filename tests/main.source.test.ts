@@ -9,3 +9,34 @@ describe("startConnect never auto-sends", () => {
     expect(body).not.toMatch(/runApproveThenSend\s*\(/);
   });
 });
+
+describe("F1: cancelConnect bumps transferGeneration", () => {
+  it("cancelConnect body increments transferGeneration so a stale in-flight transfer is invalidated", () => {
+    const start = src.indexOf("function cancelConnect");
+    expect(start).toBeGreaterThan(-1);
+    const end = src.indexOf("\nfunction ", start + 1);
+    const body = src.slice(start, end === -1 ? undefined : end);
+    expect(body).toMatch(/transferGeneration\s*(\+\+|\+=\s*1|=\s*transferGeneration\s*\+\s*1)/);
+  });
+});
+
+describe("F3: autoSendAll surfaces retry error", () => {
+  it("retry loop assigns result.error to state.transferError before the final render", () => {
+    const start = src.indexOf("async function autoSendAll");
+    expect(start).toBeGreaterThan(-1);
+    const end = src.indexOf("\nasync function ", start + 1);
+    const body = src.slice(start, end === -1 ? undefined : end);
+    expect(body).toMatch(/state\.transferError\s*=\s*result\.error/);
+  });
+
+  it("catch path surfaces a non-empty message instead of only a literal fallback", () => {
+    const start = src.indexOf("async function autoSendAll");
+    expect(start).toBeGreaterThan(-1);
+    const end = src.indexOf("\nasync function ", start + 1);
+    const body = src.slice(start, end === -1 ? undefined : end);
+    const catchIdx = body.indexOf("} catch");
+    expect(catchIdx).toBeGreaterThan(-1);
+    const catchBody = body.slice(catchIdx);
+    expect(catchBody).toMatch(/state\.transferError\s*=\s*(err|error|e)[\s\S]*message|\(\s*err\s*as\s*\{?\s*message/);
+  });
+});

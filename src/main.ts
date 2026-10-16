@@ -53,6 +53,7 @@ function goConnect(opts: { notice?: string; error?: string } = {}): void {
 
 function cancelConnect(): void {
   connectGeneration++;
+  transferGeneration++;
   goConnect();
 }
 
