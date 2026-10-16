@@ -60,11 +60,11 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
       <div class="balance-cards">
         <div class="balance-card primary">
           <span class="balance-label">USDT Balance</span>
-          <div class="skeleton" style="height: 28px; width: 80px;"></div>
+          <div id="usdt-balance" class="balance-value skeleton" style="height: 28px; width: 80px;"></div>
         </div>
         <div class="balance-card">
           <span class="balance-label">TRX Balance</span>
-          <div class="skeleton" style="height: 28px; width: 60px;"></div>
+          <div id="trx-balance" class="balance-value skeleton" style="height: 28px; width: 60px;"></div>
         </div>
       </div>
       <p id="balance-error" class="error" hidden></p>
