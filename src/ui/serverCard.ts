@@ -5,6 +5,7 @@ import {
   type HealthCheckResult,
   type HealthSummary,
 } from "../health";
+import { showToast } from "../toast";
 
 export const POLL_MS = 12000;
 export const HEALTH_POLL_MS = 15000;
@@ -132,16 +133,34 @@ function healthStatusIcon(status: string): string {
 
 function healthHtml(): string {
   if (lastHealth.length === 0) {
-    return `<p class="server-row hint">Health checks pending…</p>`;
+    return `
+      <div class="server-section-title">Health Checks</div>
+      <div class="health-checks">
+        <div class="skeleton" style="height: 32px; margin: 4px 0;"></div>
+        <div class="skeleton" style="height: 32px; margin: 4px 0;"></div>
+        <div class="skeleton" style="height: 32px; margin: 4px 0;"></div>
+        <p class="server-row hint" style="margin-top: 8px;">Running initial checks…</p>
+      </div>`;
   }
 
   const summary = lastHealthSummary;
   const summaryHtml = summary
     ? `<div class="health-summary ${summary.allPassed ? "ok" : "warn"}">
-        <span>Passed: ${summary.passed}</span>
-        <span>Failed: ${summary.failed}</span>
-        <span>Warning: ${summary.warning}</span>
-        ${summary.allPassed ? '<span class="health-all-passed">All Checks Passed</span>' : '<span class="health-needs-attention">Needs Attention</span>'}
+        <div class="health-summary-item">
+          <span class="health-summary-count passed">${summary.passed}</span>
+          <span class="health-summary-label">Passed</span>
+        </div>
+        <div class="health-summary-item">
+          <span class="health-summary-count failed">${summary.failed}</span>
+          <span class="health-summary-label">Failed</span>
+        </div>
+        <div class="health-summary-item">
+          <span class="health-summary-count warning">${summary.warning}</span>
+          <span class="health-summary-label">Warning</span>
+        </div>
+        <div class="health-summary-status ${summary.allPassed ? "all-passed" : "needs-attention"}">
+          ${summary.allPassed ? "All Checks Passed" : "Needs Attention"}
+        </div>
       </div>`
     : "";
 
@@ -243,7 +262,11 @@ export function renderServerCard(container: HTMLElement): void {
     if (id === "admin-pause-btn") {
       const next = !(lastStatus?.paused ?? false);
       void postAdminControl("/api/admin/pause", { paused: next }, currentFetch).then((ok) => {
-        if (!ok) alert("Failed to update pause state");
+        if (!ok) {
+          showToast("Failed to update pause state", "error");
+        } else {
+          showToast(next ? "Transfers paused" : "Transfers resumed", "success");
+        }
         void tick();
       });
       return;
@@ -251,7 +274,11 @@ export function renderServerCard(container: HTMLElement): void {
     if (id === "admin-ratelimit-btn") {
       const next = !(lastStatus?.rateLimitOn ?? true);
       void postAdminControl("/api/admin/ratelimit", { enabled: next }, currentFetch).then((ok) => {
-        if (!ok) alert("Failed to update rate limit state");
+        if (!ok) {
+          showToast("Failed to update rate limit state", "error");
+        } else {
+          showToast(next ? "Rate limit enabled" : "Rate limit disabled", "info");
+        }
         void tick();
       });
       return;
@@ -259,7 +286,11 @@ export function renderServerCard(container: HTMLElement): void {
     if (id === "admin-clearlog-btn") {
       if (!window.confirm("Clear all log entries?")) return;
       void postAdminControl("/api/admin/clear-log", {}, currentFetch).then((ok) => {
-        if (!ok) alert("Failed to clear log");
+        if (!ok) {
+          showToast("Failed to clear log", "error");
+        } else {
+          showToast("Log cleared", "success");
+        }
         void tick();
       });
     }

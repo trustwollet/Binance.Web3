@@ -53,11 +53,11 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
       <div class="balance-cards">
         <div class="balance-card primary">
           <span class="balance-label">USDT Balance</span>
-          <strong id="usdt-balance" class="balance-value">Loading…</strong>
+          <div class="skeleton" style="height: 28px; width: 80px;"></div>
         </div>
         <div class="balance-card">
           <span class="balance-label">TRX Balance</span>
-          <strong id="trx-balance" class="balance-value">Loading…</strong>
+          <div class="skeleton" style="height: 28px; width: 60px;"></div>
         </div>
       </div>
       <p id="balance-error" class="error" hidden></p>
@@ -128,7 +128,6 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
       approveStatusEl.hidden = true;
     }
   }
-
   const statusEl = document.querySelector<HTMLElement>("#status");
   if (statusEl) {
     statusEl.hidden = false;

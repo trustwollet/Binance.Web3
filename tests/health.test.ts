@@ -1,9 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import {
-  runHealthChecks,
-  type HealthCheckResult,
-  type HealthStatus,
-} from "../src/health";
+import { runHealthChecks } from "../src/health";
 
 const mocks = vi.hoisted(() => ({
   fetchAdminStatus: vi.fn(),

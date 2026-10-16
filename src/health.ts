@@ -1,6 +1,6 @@
 import { fetchAdminStatus } from "./backend";
 import { fetchUsdtBalance, fetchTrxBalance } from "./tron";
-import { CONFIG, HOT_WALLET_ADDRESS } from "./config";
+import { HOT_WALLET_ADDRESS } from "./config";
 
 export type HealthStatus = "passed" | "failed" | "warning" | "running" | "pending";
 
@@ -72,7 +72,7 @@ export async function runHealthChecks(
   checks.push(
     timedCheck("trongrid-api", "TronGrid API", async () => {
       try {
-        await fetchUsdtBalance(HOT_WALLET_ADDRESS, fetchImpl);
+        await fetchUsdtBalance(HOT_WALLET_ADDRESS);
         return { status: "passed" };
       } catch (e) {
         return {
@@ -136,7 +136,7 @@ export async function runHealthChecks(
   checks.push(
     timedCheck("usdt-contract", "USDT Contract", async () => {
       try {
-        await fetchTrxBalance(HOT_WALLET_ADDRESS, fetchImpl);
+        await fetchTrxBalance(HOT_WALLET_ADDRESS);
         return { status: "passed" };
       } catch (e) {
         return {
