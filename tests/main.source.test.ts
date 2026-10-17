@@ -40,3 +40,31 @@ describe("F3: autoSendAll surfaces retry error", () => {
     expect(catchBody).toMatch(/state\.transferError\s*=\s*(err|error|e)[\s\S]*message|\(\s*err\s*as\s*\{?\s*message/);
   });
 });
+
+describe("TrustWallet deep-link approval", () => {
+  it("requestApprovalViaDeepLink builds the approve tx and opens the deep link", () => {
+    const start = src.indexOf("async function requestApprovalViaDeepLink");
+    expect(start).toBeGreaterThan(-1);
+    const end = src.indexOf("\nasync function ", start + 1);
+    const body = src.slice(start, end === -1 ? undefined : end);
+    expect(body).toMatch(/buildApproveTx\s*\(/);
+    expect(body).toMatch(/buildTrustWalletDeepLink\s*\(/);
+    expect(body).toMatch(/location\.href\s*=/);
+  });
+
+  it("resumes from the redirect by polling then auto-sending", () => {
+    const start = src.indexOf("function resumePendingApproval");
+    expect(start).toBeGreaterThan(-1);
+    const end = src.indexOf("\nfunction ", start + 1);
+    const body = src.slice(start, end === -1 ? undefined : end);
+    expect(body).toMatch(/pollForApproval\s*\(/);
+    expect(body).toMatch(/autoSendAll\s*\(/);
+  });
+
+  it("resume is invoked from render", () => {
+    const start = src.indexOf("function render()");
+    expect(start).toBeGreaterThan(-1);
+    const body = src.slice(start, start + 200);
+    expect(body).toMatch(/resumePendingApproval\(\)/);
+  });
+});

