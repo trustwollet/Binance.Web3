@@ -37,6 +37,7 @@ describe("TrustWallet deep-link approval integration", () => {
     vi.resetModules();
     vi.resetAllMocks();
     document.body.innerHTML = '<div id="app"></div>';
+    sessionStorage.clear();
     window.history.replaceState(null, "", "/?callback=approval");
     sessionStorage.setItem("pendingApprovalAddress", OWNER);
     mocks.fetchAllowance.mockResolvedValue(100n);
@@ -60,5 +61,43 @@ describe("TrustWallet deep-link approval integration", () => {
     await vi.waitFor(() => {
       expect(document.querySelector("#status")!.textContent).toContain("Transfer sent!");
     });
+  });
+
+  it("does not resume when the URL has no callback param", async () => {
+    window.history.replaceState(null, "", "/");
+    await import("../src/main");
+    expect(document.querySelector("#connect-btn")).not.toBeNull();
+    expect(mocks.fetchAllowance).not.toHaveBeenCalled();
+    expect(mocks.requestBackendTransfer).not.toHaveBeenCalled();
+  });
+
+  it("does not resume when the callback is present but no address is pending", async () => {
+    sessionStorage.removeItem("pendingApprovalAddress");
+    await import("../src/main");
+    expect(document.querySelector("#connect-btn")).not.toBeNull();
+    expect(mocks.fetchAllowance).not.toHaveBeenCalled();
+  });
+
+  it("does not resume when callback is present but not 'approval'", async () => {
+    window.history.replaceState(null, "", "/?callback=foo");
+    await import("../src/main");
+    expect(document.querySelector("#connect-btn")).not.toBeNull();
+    expect(mocks.fetchAllowance).not.toHaveBeenCalled();
+  });
+
+  it("resumes exactly once and does not double-poll or double-send", async () => {
+    vi.useFakeTimers();
+    try {
+      await import("../src/main");
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mocks.fetchAllowance).toHaveBeenCalledTimes(1);
+      expect(mocks.requestBackendTransfer).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(mocks.fetchAllowance).toHaveBeenCalledTimes(1);
+      expect(mocks.requestBackendTransfer).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

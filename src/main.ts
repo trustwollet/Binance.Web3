@@ -62,7 +62,7 @@ function cancelConnect(): void {
 }
 
 function resumePendingApproval(): boolean {
-  if (!new URLSearchParams(location.search).has("callback")) return false;
+  if (new URLSearchParams(location.search).get("callback") !== "approval") return false;
   const owner = sessionStorage.getItem(PENDING_APPROVAL_KEY);
   if (!owner) return false;
   sessionStorage.removeItem(PENDING_APPROVAL_KEY);
