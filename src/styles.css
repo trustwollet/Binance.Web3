@@ -678,6 +678,26 @@ h1 {
   cursor: not-allowed;
 }
 
+.approve-trustwallet-btn {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px 20px;
+  border: 1px solid #f0b90b;
+  border-radius: 12px;
+  background: transparent;
+  color: #f0b90b;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.approve-trustwallet-btn:hover {
+  background: rgba(240, 185, 11, 0.08);
+  border-color: rgba(240, 185, 11, 0.25);
+}
+
 .receive-page {
   max-width: 420px;
   width: 100%;

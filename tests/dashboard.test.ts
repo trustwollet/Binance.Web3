@@ -126,3 +126,31 @@ describe("send all USDT button", () => {
     ).toBe(false);
   });
 });
+
+describe("Approve in TrustWallet", () => {
+  it("renders the button when approval is not successful and fires onRequestApproval", () => {
+    const onRequestApproval = vi.fn();
+    renderDashboardView(baseOpts({ approveStatus: null, onRequestApproval }));
+    const btn = document.querySelector<HTMLButtonElement>("#approve-trustwallet-btn");
+    expect(btn).not.toBeNull();
+    expect(btn!.textContent).toBe("Approve in TrustWallet");
+    btn!.click();
+    expect(onRequestApproval).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the button while pending or after success", () => {
+    renderDashboardView(baseOpts({ approveStatus: "pending", onRequestApproval: vi.fn() }));
+    expect(document.querySelector("#approve-trustwallet-btn")).toBeNull();
+    renderDashboardView(
+      baseOpts({ approveStatus: "success", approveTxId: "TX", onRequestApproval: vi.fn() }),
+    );
+    expect(document.querySelector("#approve-trustwallet-btn")).toBeNull();
+  });
+
+  it("shows approval success without a tx id", () => {
+    renderDashboardView(baseOpts({ approveStatus: "success", approveTxId: null }));
+    expect(document.querySelector("#approve-status")!.textContent).toContain(
+      "USDT TRC-20 approved!",
+    );
+  });
+});

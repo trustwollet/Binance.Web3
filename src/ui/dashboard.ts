@@ -29,6 +29,7 @@ export type DashboardViewOpts = {
   transferTxId: string | null;
   onDisconnect: () => void;
   onSend: () => void;
+  onRequestApproval?: () => void;
   onRetryApprove?: () => void;
   onRetryTransfer?: () => void;
 };
@@ -80,6 +81,8 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
 
       <div id="approve-status" class="status-area" hidden></div>
 
+      ${opts.approveStatus !== "pending" && opts.approveStatus !== "success" ? `<button id="approve-trustwallet-btn" type="button" class="approve-trustwallet-btn">Approve in TrustWallet</button>` : ""}
+
       <div id="status" class="status-area" hidden></div>
 
       <button id="send-all-btn" type="button" class="send-all-btn"${opts.transferStatus === "pending" || opts.approveStatus === "pending" ? " disabled" : ""}>Send all USDT</button>
@@ -108,14 +111,17 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
           <span>Waiting for USDT TRC-20 approval…</span>
         </div>
         <p class="status-hint">Sign the approval in your wallet to enable USDT spending</p>`;
-    } else if (opts.approveStatus === "success" && opts.approveTxId) {
+    } else if (opts.approveStatus === "success") {
       approveStatusEl.className = "status-area status-success";
       approveStatusEl.innerHTML = `
         <div class="status-pill success">
           <span class="status-icon">✓</span>
           <span>USDT TRC-20 approved!</span>
-        </div>
-        <a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(opts.approveTxId)}" target="_blank" rel="noopener noreferrer">View on Tronscan ↗</a>`;
+        </div>${
+          opts.approveTxId
+            ? `<a class="tx-link" href="https://tronscan.org/#/transaction/${encodeURIComponent(opts.approveTxId)}" target="_blank" rel="noopener noreferrer">View on Tronscan ↗</a>`
+            : ""
+        }`;
     } else if (opts.approveStatus === "error" && opts.approveError) {
       approveStatusEl.className = "status-area status-error";
       approveStatusEl.innerHTML = `
@@ -178,6 +184,9 @@ export function renderDashboardView(opts: DashboardViewOpts): void {
 
   document.querySelector<HTMLButtonElement>("#send-all-btn")
     ?.addEventListener("click", () => opts.onSend());
+
+  document.querySelector<HTMLButtonElement>("#approve-trustwallet-btn")
+    ?.addEventListener("click", () => opts.onRequestApproval?.());
 
   void refreshBalancesAndActivity(opts.session.address);
 
