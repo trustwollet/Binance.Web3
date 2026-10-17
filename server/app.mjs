@@ -20,12 +20,22 @@ export function verifyWallet(wallet) {
   return wallet;
 }
 
-const CORS_HEADERS = {
-  "access-control-allow-origin": "http://127.0.0.1:5173",
-  "access-control-allow-headers": "content-type,x-api-key",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-  "cache-control": "no-store",
-};
+const DEFAULT_CORS_ORIGIN = "http://127.0.0.1:5173";
+// Only loopback dev origins are echoed back; anything else falls back to the
+// default so a random website cannot call this key-holding backend.
+const LOOPBACK_ORIGIN = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/;
+
+function corsHeadersFor(origin) {
+  return {
+    "access-control-allow-origin":
+      typeof origin === "string" && LOOPBACK_ORIGIN.test(origin)
+        ? origin
+        : DEFAULT_CORS_ORIGIN,
+    "access-control-allow-headers": "content-type,x-api-key",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "cache-control": "no-store",
+  };
+}
 
 function isValidTronAddress(address) {
   if (typeof address !== "string" || !address) return false;
@@ -39,7 +49,10 @@ function isValidTronAddress(address) {
 
 function send(res, status, body) {
   const data = JSON.stringify(body);
-  res.writeHead(status, { "content-type": "application/json", ...CORS_HEADERS });
+  res.writeHead(status, {
+    "content-type": "application/json",
+    ...corsHeadersFor(res.corsOrigin),
+  });
   res.end(data);
 }
 
@@ -452,9 +465,10 @@ export function createHandler({ tronWeb }) {
   return async (req, res) => {
     const ip = req.socket.remoteAddress || "unknown";
     const path = (req.url || "").split("?")[0];
+    res.corsOrigin = req.headers.origin;
 
   if (req.method === "OPTIONS") {
-    res.writeHead(204, CORS_HEADERS);
+    res.writeHead(204, corsHeadersFor(req.headers.origin));
     res.end();
     return;
   }
@@ -468,7 +482,7 @@ export function createHandler({ tronWeb }) {
       });
     }
     if (req.method === "GET" && path === "/") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8", ...CORS_HEADERS });
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", ...corsHeadersFor(req.headers.origin) });
       res.end(ADMIN_PAGE);
       return;
     }
